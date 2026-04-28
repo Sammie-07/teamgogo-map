@@ -1,5 +1,4 @@
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import { useState } from "react";
 import type { Agent } from "../types";
@@ -44,15 +43,13 @@ export function MapView({ agents }: { agents: Agent[] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
-        <MarkerClusterGroup chunkedLoading maxClusterRadius={50}>
-          {agents.map((a) => (
-            <Marker key={a.id} position={[a.lat, a.lng]}>
-              <Popup>
-                <PopupBody agent={a} />
-              </Popup>
-            </Marker>
-          ))}
-        </MarkerClusterGroup>
+        {agents.map((a) => (
+          <Marker key={a.id} position={[a.lat, a.lng]}>
+            <Popup>
+              <PopupBody agent={a} />
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
     </div>
   );
