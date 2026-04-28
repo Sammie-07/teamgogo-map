@@ -9,7 +9,7 @@ import {
 } from "react-leaflet";
 import { useEffect, useState } from "react";
 import L from "leaflet";
-import type { LatLngBounds, LatLngBoundsExpression } from "leaflet";
+import type { LatLngBounds, LatLngBoundsExpression, Map as LMap } from "leaflet";
 import type { Agent } from "../types";
 import { regionStats, densityRadius } from "../utils/coverage";
 
@@ -23,12 +23,95 @@ function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number }
   return null;
 }
 
-type MapState = { zoom: number; bounds: LatLngBounds | null };
+const LABEL_FADE_START = 10;
+const LABEL_FADE_END = 12;
 
-function MapStateTracker({ onChange }: { onChange: (s: MapState) => void }) {
+/**
+ * Greedy non-overlap label placement. Project each agent's lat/lng to
+ * pixels, then place labels in priority order (selected first, then top
+ * to bottom) skipping any that would collide with an already-placed
+ * label's bounding box. Result: at most one label per ~140px×26px area.
+ */
+function pickVisibleLabels(
+  map: LMap,
+  agents: Agent[],
+  selectedId: string | null
+): Set<string> {
+  const visible = new Set<string>();
+  const placed: { x: number; y: number; w: number; h: number }[] = [];
+  const PAD = 6;
+
+  const sorted = [...agents].sort((a, b) => {
+    if (a.id === selectedId) return -1;
+    if (b.id === selectedId) return 1;
+    // Influencer agents next
+    if (a.influencer && !b.influencer) return -1;
+    if (!a.influencer && b.influencer) return 1;
+    // Then top-to-bottom for stability
+    return b.lat - a.lat;
+  });
+
+  for (const a of sorted) {
+    const pt = map.latLngToContainerPoint([a.lat, a.lng]);
+    const labelW = Math.min(180, 60 + a.name.length * 6.2);
+    const box = {
+      x: pt.x + 10,            // label is to the right of the pin
+      y: pt.y - 12,            // vertically centered on pin
+      w: labelW,
+      h: 22,
+    };
+    let conflict = false;
+    for (const p of placed) {
+      if (
+        box.x < p.x + p.w + PAD &&
+        box.x + box.w + PAD > p.x &&
+        box.y < p.y + p.h + PAD &&
+        box.y + box.h + PAD > p.y
+      ) {
+        conflict = true;
+        break;
+      }
+    }
+    if (!conflict) {
+      visible.add(a.id);
+      placed.push(box);
+    }
+  }
+  return visible;
+}
+
+type MapState = {
+  zoom: number;
+  bounds: LatLngBounds | null;
+  labelOpacity: number;
+  visibleLabels: Set<string>;
+};
+
+function MapStateTracker({
+  agents,
+  selectedId,
+  onChange,
+}: {
+  agents: Agent[];
+  selectedId: string | null;
+  onChange: (s: MapState) => void;
+}) {
   const map = useMap();
   useEffect(() => {
-    const update = () => onChange({ zoom: map.getZoom(), bounds: map.getBounds() });
+    const update = () => {
+      const zoom = map.getZoom();
+      const bounds = map.getBounds();
+      const labelOpacity = Math.max(
+        0,
+        Math.min(1, (zoom - LABEL_FADE_START) / (LABEL_FADE_END - LABEL_FADE_START))
+      );
+      let visibleLabels: Set<string> = new Set();
+      if (labelOpacity > 0) {
+        const inView = agents.filter((a) => bounds.contains([a.lat, a.lng]));
+        visibleLabels = pickVisibleLabels(map, inView, selectedId);
+      }
+      onChange({ zoom, bounds, labelOpacity, visibleLabels });
+    };
     update();
     map.on("zoomend", update);
     map.on("moveend", update);
@@ -36,7 +119,7 @@ function MapStateTracker({ onChange }: { onChange: (s: MapState) => void }) {
       map.off("zoomend", update);
       map.off("moveend", update);
     };
-  }, [map, onChange]);
+  }, [map, agents, selectedId, onChange]);
   return null;
 }
 
@@ -66,9 +149,6 @@ type Props = {
   darkMode: boolean;
 };
 
-const LABEL_FADE_START = 9;
-const LABEL_FADE_END = 11.5;
-
 export function MapView({
   agents,
   selected,
@@ -80,12 +160,12 @@ export function MapView({
   userLocation,
   darkMode,
 }: Props) {
-  const [mapState, setMapState] = useState<MapState>({ zoom: initialView.zoom, bounds: null });
-
-  const labelOpacity = Math.max(
-    0,
-    Math.min(1, (mapState.zoom - LABEL_FADE_START) / (LABEL_FADE_END - LABEL_FADE_START))
-  );
+  const [mapState, setMapState] = useState<MapState>({
+    zoom: initialView.zoom,
+    bounds: null,
+    labelOpacity: 0,
+    visibleLabels: new Set(),
+  });
 
   const tileUrl = darkMode
     ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -112,9 +192,12 @@ export function MapView({
           noWrap
         />
         <FlyTo target={flyTarget} />
-        <MapStateTracker onChange={setMapState} />
+        <MapStateTracker
+          agents={agents}
+          selectedId={selected?.id ?? null}
+          onChange={setMapState}
+        />
 
-        {/* Density overlay — translucent circles per state, sized by agent count */}
         {showDensity &&
           stats.map((s) => (
             <Circle
@@ -131,7 +214,6 @@ export function MapView({
             />
           ))}
 
-        {/* Pulsing ring under the selected pin */}
         {selected && (
           <Marker
             position={[selected.lat, selected.lng]}
@@ -142,7 +224,6 @@ export function MapView({
           />
         )}
 
-        {/* User location marker */}
         {userLocation && (
           <Marker
             position={[userLocation.lat, userLocation.lng]}
@@ -152,14 +233,10 @@ export function MapView({
           />
         )}
 
-        {/* All agents */}
         {agents.map((a) => {
           const isSelected = selected?.id === a.id;
           const isFaded = selected !== null && !isSelected;
-          const showLabel =
-            labelOpacity > 0 &&
-            mapState.bounds !== null &&
-            mapState.bounds.contains([a.lat, a.lng]);
+          const showLabel = mapState.visibleLabels.has(a.id);
           return (
             <CircleMarker
               key={a.id}
@@ -176,9 +253,9 @@ export function MapView({
                 <Tooltip
                   permanent
                   direction="right"
-                  offset={[8, 0]}
-                  opacity={labelOpacity}
-                  className="agent-label"
+                  offset={[10, 0]}
+                  opacity={mapState.labelOpacity}
+                  className={`agent-label${isSelected ? " selected" : ""}`}
                 >
                   {a.name}
                 </Tooltip>
