@@ -105,9 +105,14 @@ export default function App() {
   }, []);
 
   function toggleLocation() {
-    // Already located? Click clears it.
+    // Already located? Click clears it and flies back to the default overview.
     if (userLocation) {
       setUserLocation(null);
+      setFlyTarget({
+        lat: DEFAULT_VIEW.center[0],
+        lng: DEFAULT_VIEW.center[1],
+        zoom: DEFAULT_VIEW.zoom,
+      });
       return;
     }
     if (!navigator.geolocation) {
