@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Agent } from "../types";
+import { matchesQuery } from "../utils/search";
 
 type Props = {
   query: string;
@@ -26,15 +27,7 @@ export function SearchBar({ query, onQueryChange, agents, onPick }: Props) {
 
   const q = query.trim().toLowerCase();
   const suggestions: Agent[] = q
-    ? agents
-        .filter(
-          (a) =>
-            a.name.toLowerCase().includes(q) ||
-            a.city.toLowerCase().includes(q) ||
-            a.state.toLowerCase().includes(q) ||
-            a.zip.toLowerCase().includes(q)
-        )
-        .slice(0, 8)
+    ? agents.filter((a) => matchesQuery(a, q)).slice(0, 8)
     : [];
 
   function pick(a: Agent) {

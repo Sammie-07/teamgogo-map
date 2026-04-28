@@ -28,7 +28,16 @@ export default function App() {
       .catch(() => setLoading(false));
   }, []);
 
-  const agents = useMemo(() => fanOutOverlaps(agentsRaw), [agentsRaw]);
+  // Source data has duplicate Agent IDs — dedupe before doing anything else.
+  const agents = useMemo(() => {
+    const seen = new Set<string>();
+    const unique = agentsRaw.filter((a) => {
+      if (seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+    return fanOutOverlaps(unique);
+  }, [agentsRaw]);
 
   const countries = useMemo(() => {
     const set = new Set(agents.map((a) => a.country).filter(Boolean));
