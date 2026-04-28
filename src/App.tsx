@@ -4,6 +4,7 @@ import { ListView } from "./components/ListView";
 import { SidePanel } from "./components/SidePanel";
 import { SearchBar } from "./components/SearchBar";
 import { fanOutOverlaps } from "./utils/positions";
+import { matchesQuery } from "./utils/search";
 import type { Agent } from "./types";
 
 type View = "map" | "list";
@@ -27,7 +28,6 @@ export default function App() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Spread overlapping pins once after load. Stable across filters/searches.
   const agents = useMemo(() => fanOutOverlaps(agentsRaw), [agentsRaw]);
 
   const countries = useMemo(() => {
@@ -39,13 +39,7 @@ export default function App() {
     const q = query.trim().toLowerCase();
     return agents.filter((a) => {
       if (country && a.country !== country) return false;
-      if (!q) return true;
-      return (
-        a.name.toLowerCase().includes(q) ||
-        a.city.toLowerCase().includes(q) ||
-        a.state.toLowerCase().includes(q) ||
-        a.zip.toLowerCase().includes(q)
-      );
+      return matchesQuery(a, q);
     });
   }, [agents, query, country]);
 

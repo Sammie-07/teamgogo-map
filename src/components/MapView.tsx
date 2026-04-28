@@ -1,14 +1,6 @@
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
-import L from "leaflet";
+import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
 import { useEffect } from "react";
 import type { Agent } from "../types";
-
-const dotIcon = L.divIcon({
-  className: "dot-marker",
-  html: '<span class="dot"></span>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
 
 function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number } | null }) {
   const map = useMap();
@@ -42,15 +34,23 @@ export function MapView({ agents, selectedId, flyTarget, onSelect }: Props) {
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
         <FlyTo target={flyTarget} />
-        {agents.map((a) => (
-          <Marker
-            key={a.id}
-            position={[a.lat, a.lng]}
-            icon={dotIcon}
-            eventHandlers={{ click: () => onSelect(a) }}
-            opacity={selectedId === null || selectedId === a.id ? 1 : 0.55}
-          />
-        ))}
+        {agents.map((a) => {
+          const isSelected = selectedId === a.id;
+          const isFaded = selectedId !== null && !isSelected;
+          return (
+            <CircleMarker
+              key={a.id}
+              center={[a.lat, a.lng]}
+              radius={isSelected ? 8 : 6}
+              fillColor="#d94f3b"
+              fillOpacity={isFaded ? 0.4 : 0.95}
+              color="#ffffff"
+              weight={2}
+              opacity={isFaded ? 0.5 : 1}
+              eventHandlers={{ click: () => onSelect(a) }}
+            />
+          );
+        })}
       </MapContainer>
     </div>
   );
