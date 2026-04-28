@@ -1,5 +1,12 @@
-import { MapContainer, TileLayer, CircleMarker, useMap } from "react-leaflet";
-import { useEffect } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Tooltip,
+  useMap,
+} from "react-leaflet";
+import { useEffect, useState } from "react";
+import type { LatLngBounds } from "leaflet";
 import type { Agent } from "../types";
 
 function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number } | null }) {
@@ -12,6 +19,23 @@ function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number }
   return null;
 }
 
+type MapState = { zoom: number; bounds: LatLngBounds | null };
+
+function MapStateTracker({ onChange }: { onChange: (s: MapState) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    const update = () => onChange({ zoom: map.getZoom(), bounds: map.getBounds() });
+    update();
+    map.on("zoomend", update);
+    map.on("moveend", update);
+    return () => {
+      map.off("zoomend", update);
+      map.off("moveend", update);
+    };
+  }, [map, onChange]);
+  return null;
+}
+
 type Props = {
   agents: Agent[];
   selectedId: string | null;
@@ -19,7 +43,18 @@ type Props = {
   onSelect: (a: Agent) => void;
 };
 
+// Fade labels from 0 → 1 between these zoom levels
+const LABEL_FADE_START = 9;
+const LABEL_FADE_END = 11.5;
+
 export function MapView({ agents, selectedId, flyTarget, onSelect }: Props) {
+  const [mapState, setMapState] = useState<MapState>({ zoom: 4, bounds: null });
+
+  const labelOpacity = Math.max(
+    0,
+    Math.min(1, (mapState.zoom - LABEL_FADE_START) / (LABEL_FADE_END - LABEL_FADE_START))
+  );
+
   return (
     <div className="map-wrap">
       <MapContainer
@@ -34,9 +69,14 @@ export function MapView({ agents, selectedId, flyTarget, onSelect }: Props) {
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
         <FlyTo target={flyTarget} />
+        <MapStateTracker onChange={setMapState} />
         {agents.map((a) => {
           const isSelected = selectedId === a.id;
           const isFaded = selectedId !== null && !isSelected;
+          const showLabel =
+            labelOpacity > 0 &&
+            mapState.bounds !== null &&
+            mapState.bounds.contains([a.lat, a.lng]);
           return (
             <CircleMarker
               key={a.id}
@@ -48,7 +88,19 @@ export function MapView({ agents, selectedId, flyTarget, onSelect }: Props) {
               weight={2}
               opacity={isFaded ? 0.5 : 1}
               eventHandlers={{ click: () => onSelect(a) }}
-            />
+            >
+              {showLabel && (
+                <Tooltip
+                  permanent
+                  direction="right"
+                  offset={[8, 0]}
+                  opacity={labelOpacity}
+                  className="agent-label"
+                >
+                  {a.name}
+                </Tooltip>
+              )}
+            </CircleMarker>
           );
         })}
       </MapContainer>
