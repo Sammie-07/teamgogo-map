@@ -1,36 +1,33 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
-import { useState } from "react";
+import { useEffect } from "react";
 import type { Agent } from "../types";
 
-// Fix default marker icon paths (Leaflet's default assets break under bundlers)
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
-L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
+const dotIcon = L.divIcon({
+  className: "dot-marker",
+  html: '<span class="dot"></span>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
 
-function PopupBody({ agent }: { agent: Agent }) {
-  const [open, setOpen] = useState(false);
-  const loc = [agent.city, agent.state, agent.country].filter(Boolean).join(", ");
-  return (
-    <div className="popup-card">
-      <h3>{agent.name}</h3>
-      <div className="loc">{loc}</div>
-      {!open ? (
-        <button className="contact-btn" onClick={() => setOpen(true)}>
-          Show contact
-        </button>
-      ) : (
-        <div className="contact">
-          {agent.email && <a href={`mailto:${agent.email}`}>{agent.email}</a>}
-          {agent.phone && <a href={`tel:${agent.phone.replace(/[^0-9+]/g, "")}`}>{agent.phone}</a>}
-        </div>
-      )}
-    </div>
-  );
+function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) {
+      map.flyTo([target.lat, target.lng], target.zoom ?? 12, { duration: 0.8 });
+    }
+  }, [target, map]);
+  return null;
 }
 
-export function MapView({ agents }: { agents: Agent[] }) {
+type Props = {
+  agents: Agent[];
+  selectedId: string | null;
+  flyTarget: { lat: number; lng: number; zoom?: number } | null;
+  onSelect: (a: Agent) => void;
+};
+
+export function MapView({ agents, selectedId, flyTarget, onSelect }: Props) {
   return (
     <div className="map-wrap">
       <MapContainer
@@ -38,17 +35,21 @@ export function MapView({ agents }: { agents: Agent[] }) {
         zoom={4}
         scrollWheelZoom={true}
         worldCopyJump
+        preferCanvas
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
+        <FlyTo target={flyTarget} />
         {agents.map((a) => (
-          <Marker key={a.id} position={[a.lat, a.lng]}>
-            <Popup>
-              <PopupBody agent={a} />
-            </Popup>
-          </Marker>
+          <Marker
+            key={a.id}
+            position={[a.lat, a.lng]}
+            icon={dotIcon}
+            eventHandlers={{ click: () => onSelect(a) }}
+            opacity={selectedId === null || selectedId === a.id ? 1 : 0.55}
+          />
         ))}
       </MapContainer>
     </div>

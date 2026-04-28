@@ -13,42 +13,28 @@
 }
 
 * { box-sizing: border-box; }
-
 html, body, #root { height: 100%; margin: 0; }
-
 body { font-size: 14px; line-height: 1.45; }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+.app { display: flex; flex-direction: column; height: 100vh; }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 12px 20px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   z-index: 1000;
+  position: relative;
 }
+.header h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.header .count { color: var(--muted); font-size: 13px; }
 
-.header h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.header .count {
-  color: var(--muted);
-  font-size: 13px;
-}
-
+/* --- search + autocomplete --- */
+.search-wrap { position: relative; flex: 1; max-width: 360px; }
 .search {
-  flex: 1;
-  max-width: 360px;
+  width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -57,6 +43,34 @@ body { font-size: 14px; line-height: 1.45; }
   color: inherit;
 }
 .search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  z-index: 2000;
+}
+.suggestions li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  cursor: pointer;
+  gap: 2px;
+}
+.suggestions li.active,
+.suggestions li:hover { background: #f5f1ea; }
+.sug-name { font-weight: 600; font-size: 13px; }
+.sug-loc { color: var(--muted); font-size: 12px; }
 
 .filter {
   padding: 8px 10px;
@@ -81,16 +95,29 @@ body { font-size: 14px; line-height: 1.45; }
   color: var(--muted);
   cursor: pointer;
 }
-.toggle button.active {
-  background: var(--text);
-  color: var(--panel);
-}
+.toggle button.active { background: var(--text); color: var(--panel); }
 
+/* --- body --- */
 .body { flex: 1; min-height: 0; position: relative; }
 
 .map-wrap { position: absolute; inset: 0; }
 .leaflet-container { width: 100%; height: 100%; background: #eef0f2; }
 
+/* Custom dot marker */
+.dot-marker { background: transparent; border: none; }
+.dot-marker .dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+.dot-marker:hover .dot { transform: scale(1.4); }
+
+/* --- list view --- */
 .list-wrap {
   position: absolute;
   inset: 0;
@@ -101,25 +128,21 @@ body { font-size: 14px; line-height: 1.45; }
   gap: 12px;
   align-content: start;
 }
-
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
 }
-.card h3 {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  font-weight: 600;
-}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card h3 { margin: 0 0 4px 0; font-size: 15px; font-weight: 600; }
 .card .loc { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
-.card .meta {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
+.card .meta { display: flex; gap: 6px; flex-wrap: wrap; }
 .tag {
   font-size: 11px;
   padding: 2px 8px;
@@ -129,35 +152,91 @@ body { font-size: 14px; line-height: 1.45; }
 }
 .tag.influencer { background: #fde9e4; color: var(--accent); }
 
+/* --- side panel --- */
+.side-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(380px, 100%);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  padding: 24px;
+  overflow-y: auto;
+  z-index: 1500;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.06);
+  animation: slide-in 0.2s ease-out;
+}
+@keyframes slide-in {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.side-panel h2 {
+  margin: 8px 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.side-panel .loc {
+  color: var(--muted);
+  margin: 0 0 16px 0;
+}
+.side-panel .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.panel-section { padding-top: 16px; border-top: 1px solid var(--border); }
+.panel-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+}
+.close-btn:hover { background: var(--bg); color: var(--text); }
+
 .contact-btn {
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px 14px;
   background: var(--text);
   color: var(--panel);
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font: inherit;
+  font-weight: 500;
   cursor: pointer;
 }
 .contact-btn:hover { background: #000; }
 
-.contact {
-  margin-top: 8px;
-  font-size: 13px;
-  display: grid;
-  gap: 4px;
+.contact { display: grid; gap: 6px; }
+.contact a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
 }
-.contact a { color: var(--accent); text-decoration: none; }
+.contact a:last-child { border-bottom: none; }
 .contact a:hover { text-decoration: underline; }
-
-.popup-card { min-width: 220px; }
-.popup-card h3 { margin: 0 0 4px 0; font-size: 14px; }
-.popup-card .loc { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 
 .empty { color: var(--muted); padding: 32px; text-align: center; }
 
 @media (max-width: 640px) {
   .header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
   .header h1 { font-size: 16px; }
-  .search { max-width: 100%; flex-basis: 100%; order: 99; }
+  .search-wrap { max-width: 100%; flex-basis: 100%; order: 99; }
+  .side-panel { width: 100%; }
 }

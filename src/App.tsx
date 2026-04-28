@@ -1,26 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
 import { MapView } from "./components/MapView";
 import { ListView } from "./components/ListView";
+import { SidePanel } from "./components/SidePanel";
+import { SearchBar } from "./components/SearchBar";
+import { fanOutOverlaps } from "./utils/positions";
 import type { Agent } from "./types";
 
 type View = "map" | "list";
 
 export default function App() {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentsRaw, setAgentsRaw] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("map");
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [selected, setSelected] = useState<Agent | null>(null);
+  const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}agents.json`)
       .then((r) => r.json())
       .then((data: Agent[]) => {
-        setAgents(data);
+        setAgentsRaw(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  // Spread overlapping pins once after load. Stable across filters/searches.
+  const agents = useMemo(() => fanOutOverlaps(agentsRaw), [agentsRaw]);
 
   const countries = useMemo(() => {
     const set = new Set(agents.map((a) => a.country).filter(Boolean));
@@ -41,18 +49,25 @@ export default function App() {
     });
   }, [agents, query, country]);
 
+  function pickAgent(a: Agent) {
+    setSelected(a);
+    setFlyTarget({ lat: a.lat, lng: a.lng, zoom: 12 });
+  }
+
   return (
     <div className="app">
       <header className="header">
         <h1>#teamgogo map</h1>
         <span className="count">
-          {loading ? "Loading…" : `${filtered.length.toLocaleString()} of ${agents.length.toLocaleString()} agents`}
+          {loading
+            ? "Loading…"
+            : `${filtered.length.toLocaleString()} of ${agents.length.toLocaleString()} agents`}
         </span>
-        <input
-          className="search"
-          placeholder="Search name, city, state, zip…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+        <SearchBar
+          query={query}
+          onQueryChange={setQuery}
+          agents={filtered}
+          onPick={pickAgent}
         />
         <select
           className="filter"
@@ -80,7 +95,17 @@ export default function App() {
         </div>
       </header>
       <div className="body">
-        {view === "map" ? <MapView agents={filtered} /> : <ListView agents={filtered} />}
+        {view === "map" ? (
+          <MapView
+            agents={filtered}
+            selectedId={selected?.id ?? null}
+            flyTarget={flyTarget}
+            onSelect={pickAgent}
+          />
+        ) : (
+          <ListView agents={filtered} onSelect={pickAgent} />
+        )}
+        {selected && <SidePanel agent={selected} onClose={() => setSelected(null)} />}
       </div>
     </div>
   );
