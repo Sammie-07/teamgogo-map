@@ -104,7 +104,12 @@ export default function App() {
     setFlyTarget({ lat: a.lat, lng: a.lng, zoom: 12 });
   }, []);
 
-  function findMe() {
+  function toggleLocation() {
+    // Already located? Click clears it.
+    if (userLocation) {
+      setUserLocation(null);
+      return;
+    }
     if (!navigator.geolocation) {
       alert("Geolocation isn't available in this browser.");
       return;
@@ -158,10 +163,10 @@ export default function App() {
 
         <button
           className={`icon-btn${userLocation ? " active" : ""}`}
-          onClick={findMe}
+          onClick={toggleLocation}
           disabled={locating}
-          title="Find agents near me"
-          aria-label="Find agents near me"
+          title={userLocation ? "Clear location" : "Find agents near me"}
+          aria-label={userLocation ? "Clear location" : "Find agents near me"}
         >
           {locating ? "…" : "📍"}
         </button>
