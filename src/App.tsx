@@ -99,9 +99,18 @@ export default function App() {
     return agentsBounds(agents);
   }, [agents]);
 
+  // Flies the map to the agent. Used by search/list where the user is
+  // navigating to a new agent.
   const pickAgent = useCallback((a: Agent) => {
     setSelected(a);
     setFlyTarget({ lat: a.lat, lng: a.lng, zoom: 12 });
+  }, []);
+
+  // Selects an agent without changing the map view. Used by direct pin/label
+  // clicks — the user is already looking at the pin, don't yank them
+  // somewhere else.
+  const selectOnMap = useCallback((a: Agent) => {
+    setSelected(a);
   }, []);
 
   function toggleLocation() {
@@ -212,7 +221,7 @@ export default function App() {
             agents={filtered}
             selected={selected}
             flyTarget={flyTarget}
-            onSelect={pickAgent}
+            onSelect={selectOnMap}
             maxBounds={maxBounds}
             initialView={DEFAULT_VIEW}
             showDensity={showDensity}
