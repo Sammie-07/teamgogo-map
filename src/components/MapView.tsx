@@ -237,11 +237,13 @@ export function MapView({
           const isSelected = selected?.id === a.id;
           const isFaded = selected !== null && !isSelected;
           const showLabel = mapState.visibleLabels.has(a.id);
+          // Bigger pins at higher zoom for easier clicking
+          const base = mapState.zoom >= 12 ? 9 : mapState.zoom >= 10 ? 7 : 6;
           return (
             <CircleMarker
               key={a.id}
               center={[a.lat, a.lng]}
-              radius={isSelected ? 8 : 6}
+              radius={isSelected ? base + 2 : base}
               fillColor="#d94f3b"
               fillOpacity={isFaded ? 0.35 : 0.95}
               color="#ffffff"
@@ -252,10 +254,12 @@ export function MapView({
               {showLabel && (
                 <Tooltip
                   permanent
+                  interactive
                   direction="right"
                   offset={[10, 0]}
                   opacity={mapState.labelOpacity}
                   className={`agent-label${isSelected ? " selected" : ""}`}
+                  eventHandlers={{ click: () => onSelect(a) }}
                 >
                   {a.name}
                 </Tooltip>
