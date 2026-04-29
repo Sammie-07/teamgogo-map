@@ -179,7 +179,13 @@ export default function App() {
           className={`icon-btn${userLocation ? " active" : ""}`}
           onClick={toggleLocation}
           disabled={locating}
-          title={userLocation ? "Clear location" : "Find agents near me"}
+          data-tooltip={
+            locating
+              ? "Locating…"
+              : userLocation
+              ? "Clear my location"
+              : "Find agents near me"
+          }
           aria-label={userLocation ? "Clear location" : "Find agents near me"}
         >
           {locating ? "…" : "📍"}
@@ -188,7 +194,7 @@ export default function App() {
         <button
           className={`icon-btn${showDensity ? " active" : ""}`}
           onClick={() => setShowDensity((v) => !v)}
-          title="Toggle coverage density"
+          data-tooltip={showDensity ? "Hide coverage density" : "Show coverage density"}
           aria-label="Toggle coverage density"
         >
           ◉
@@ -197,7 +203,7 @@ export default function App() {
         <button
           className="icon-btn"
           onClick={() => setDarkMode((v) => !v)}
-          title="Toggle dark mode"
+          data-tooltip={darkMode ? "Switch to light mode" : "Switch to dark mode"}
           aria-label="Toggle dark mode"
         >
           {darkMode ? "☀" : "☾"}

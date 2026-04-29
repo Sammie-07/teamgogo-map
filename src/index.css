@@ -164,6 +164,51 @@ body {
   border-color: var(--accent);
 }
 
+/* === Custom hover tooltips ===
+   Used via [data-tooltip="..."] on any element. Appears instantly on hover,
+   matches the design system, doesn't conflict with browser-native title. */
+[data-tooltip] { position: relative; }
+[data-tooltip]::after,
+[data-tooltip]::before {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-3px);
+  background: var(--text);
+  color: var(--panel);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  letter-spacing: -0.005em;
+  box-shadow: var(--shadow-md);
+  z-index: 9999;
+}
+[data-tooltip]::before {
+  /* Little arrow */
+  content: "";
+  top: calc(100% + 4px);
+  transform: translateX(-50%) translateY(-3px);
+  border: 5px solid transparent;
+  border-bottom-color: var(--text);
+  z-index: 9999;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::after,
+[data-tooltip]:focus-visible::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 0.15s; /* small delay so quick mouse-overs don't flash */
+}
+
 .toggle {
   display: inline-flex;
   border: 1px solid var(--border);
