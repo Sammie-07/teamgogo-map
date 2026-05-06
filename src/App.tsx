@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { MapView } from "./components/MapView";
 import { ListView } from "./components/ListView";
 import { SidePanel } from "./components/SidePanel";
@@ -250,6 +251,7 @@ export default function App() {
           />
         )}
       </div>
+      <Analytics />
     </div>
   );
 }
