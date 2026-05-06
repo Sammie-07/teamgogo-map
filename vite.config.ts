@@ -3,5 +3,6 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/teamgogo-map/",
+  // Relative base — same build works on Vercel root AND GitHub Pages subpath
+  base: "./",
 });
