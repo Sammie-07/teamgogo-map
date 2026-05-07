@@ -355,6 +355,9 @@ html.dark .pulse-marker .pulse-dot { box-shadow: 0 0 0 2px var(--panel), 0 2px 8
   color: inherit;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  /* Skip rendering off-screen cards entirely — huge scroll perf win when there are 1,673 of them */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 110px;
 }
 .card:hover {
   border-color: var(--accent);
