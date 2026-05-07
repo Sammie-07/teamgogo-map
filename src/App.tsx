@@ -70,7 +70,7 @@ export default function App() {
       const found = agents.find((a) => a.id === initialUrl.agentId);
       if (found) {
         setSelected(found);
-        setFlyTarget({ lat: found.lat, lng: found.lng, zoom: 12 });
+        setFlyTarget({ kind: "point", lat: found.lat, lng: found.lng, zoom: 12 });
       }
     }
   }, [agents, initialUrl.agentId, selected]);
