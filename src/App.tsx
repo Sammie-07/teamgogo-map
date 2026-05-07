@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
-import { MapView } from "./components/MapView";
+import { MapView, type FlyTarget } from "./components/MapView";
 import { ListView } from "./components/ListView";
 import { SidePanel } from "./components/SidePanel";
 import { SearchBar } from "./components/SearchBar";
 import { MapSkeleton, ListSkeleton } from "./components/LoadingSkeleton";
 import { fanOutOverlaps } from "./utils/positions";
 import { matchesQuery } from "./utils/search";
-import { agentsBounds } from "./utils/bounds";
+import { agentsBounds, boundsOfAgents } from "./utils/bounds";
 import { readUrlState, useSyncUrl } from "./utils/url";
 import type { Agent } from "./types";
 import type { LatLngBoundsExpression } from "leaflet";
@@ -30,7 +30,7 @@ export default function App() {
   const [query, setQuery] = useState(initialUrl.query);
   const [country, setCountry] = useState(initialUrl.country);
   const [selected, setSelected] = useState<Agent | null>(null);
-  const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number; zoom?: number } | null>(null);
+  const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [showDensity, setShowDensity] = useState(false);
@@ -90,8 +90,12 @@ export default function App() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Search is GLOBAL — when the user is searching, ignore the country
+    // filter so they can find agents in any country. When not searching,
+    // the country filter applies as a "browse this country" mode.
+    const applyCountryFilter = q === "";
     return agents.filter((a) => {
-      if (country && a.country !== country) return false;
+      if (applyCountryFilter && country && a.country !== country) return false;
       return matchesQuery(a, q);
     });
   }, [agents, query, country]);
@@ -101,11 +105,18 @@ export default function App() {
   }, [agents]);
 
   // Flies the map to the agent. Used by search/list where the user is
-  // navigating to a new agent.
-  const pickAgent = useCallback((a: Agent) => {
-    setSelected(a);
-    setFlyTarget({ lat: a.lat, lng: a.lng, zoom: 12 });
-  }, []);
+  // navigating to a new agent. If the picked agent is from a country that's
+  // not the current filter, clear the filter so the agent shows on the map.
+  const pickAgent = useCallback(
+    (a: Agent) => {
+      setSelected(a);
+      setFlyTarget({ kind: "point", lat: a.lat, lng: a.lng, zoom: 12 });
+      if (country && a.country !== country) {
+        setCountry("");
+      }
+    },
+    [country]
+  );
 
   // Selects an agent without changing the map view. Used by direct pin/label
   // clicks — the user is already looking at the pin, don't yank them
@@ -114,11 +125,44 @@ export default function App() {
     setSelected(a);
   }, []);
 
+  // Auto-fit the map when the country filter changes — so picking a country
+  // with one agent zooms straight to that pin, and picking a country with
+  // many fits all of them in view.
+  useEffect(() => {
+    if (loading || agents.length === 0) return;
+    if (country) {
+      const inCountry = agents.filter((a) => a.country === country);
+      if (inCountry.length === 0) return;
+      if (inCountry.length === 1) {
+        setFlyTarget({
+          kind: "point",
+          lat: inCountry[0].lat,
+          lng: inCountry[0].lng,
+          zoom: 11,
+        });
+      } else {
+        const b = boundsOfAgents(inCountry, 0.5);
+        if (b) setFlyTarget({ kind: "bounds", bounds: b });
+      }
+    } else {
+      setFlyTarget({
+        kind: "point",
+        lat: DEFAULT_VIEW.center[0],
+        lng: DEFAULT_VIEW.center[1],
+        zoom: DEFAULT_VIEW.zoom,
+      });
+    }
+    // We only react to the country filter — not to agents/loading after
+    // initial mount — so this fires when the user changes the dropdown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
+
   function toggleLocation() {
     // Already located? Click clears it and flies back to the default overview.
     if (userLocation) {
       setUserLocation(null);
       setFlyTarget({
+        kind: "point",
         lat: DEFAULT_VIEW.center[0],
         lng: DEFAULT_VIEW.center[1],
         zoom: DEFAULT_VIEW.zoom,
@@ -134,7 +178,7 @@ export default function App() {
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(loc);
-        setFlyTarget({ ...loc, zoom: 9 });
+        setFlyTarget({ kind: "point", ...loc, zoom: 9 });
         setLocating(false);
       },
       () => {

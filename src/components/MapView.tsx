@@ -13,11 +13,18 @@ import type { LatLngBounds, LatLngBoundsExpression, Map as LMap } from "leaflet"
 import type { Agent } from "../types";
 import { regionStats, densityRadius } from "../utils/coverage";
 
-function FlyTo({ target }: { target: { lat: number; lng: number; zoom?: number } | null }) {
+export type FlyTarget =
+  | { kind: "point"; lat: number; lng: number; zoom?: number }
+  | { kind: "bounds"; bounds: [[number, number], [number, number]] };
+
+function FlyTo({ target }: { target: FlyTarget | null }) {
   const map = useMap();
   useEffect(() => {
-    if (target) {
+    if (!target) return;
+    if (target.kind === "point") {
       map.flyTo([target.lat, target.lng], target.zoom ?? 12, { duration: 0.8 });
+    } else {
+      map.flyToBounds(target.bounds, { duration: 0.8, padding: [40, 40], maxZoom: 11 });
     }
   }, [target, map]);
   return null;
@@ -140,7 +147,7 @@ const userIcon = L.divIcon({
 type Props = {
   agents: Agent[];
   selected: Agent | null;
-  flyTarget: { lat: number; lng: number; zoom?: number } | null;
+  flyTarget: FlyTarget | null;
   onSelect: (a: Agent) => void;
   maxBounds: LatLngBoundsExpression | null;
   initialView: { center: [number, number]; zoom: number };
