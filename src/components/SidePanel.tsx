@@ -42,15 +42,6 @@ export function SidePanel({ agent, onClose, userLocation }: Props) {
         <div className="distance-pill">{formatDistance(distance)} from you</div>
       )}
 
-      <div className="meta">
-        {agent.influencer && (
-          <span className="tag influencer">{agent.influencer}</span>
-        )}
-        {agent.years && <span className="tag">{agent.years} years</span>}
-        {agent.level && <span className="tag">Level {agent.level}</span>}
-        {agent.status && <span className="tag">{agent.status}</span>}
-      </div>
-
       <div className="panel-section">
         <h3>Contact</h3>
         {!showContact ? (
