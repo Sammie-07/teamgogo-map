@@ -9,6 +9,7 @@ import { fanOutOverlaps } from "./utils/positions";
 import { matchesQuery } from "./utils/search";
 import { agentsBounds, boundsOfAgents } from "./utils/bounds";
 import { readUrlState, useSyncUrl } from "./utils/url";
+import { agentRowKey } from "./utils/identity";
 import type { Agent } from "./types";
 import type { LatLngBoundsExpression } from "leaflet";
 
@@ -53,21 +54,29 @@ export default function App() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Dedupe + spread overlapping pins
+  // Dedupe + spread overlapping pins.
+  // KEY: agent ID + location. Same ID + same location = real duplicate
+  // (drop one). Same ID + different location = primary/secondary location
+  // (keep both — agent gets two pins on the map).
   const agents = useMemo(() => {
     const seen = new Set<string>();
     const unique = agentsRaw.filter((a) => {
-      if (seen.has(a.id)) return false;
-      seen.add(a.id);
+      const k = agentRowKey(a);
+      if (seen.has(k)) return false;
+      seen.add(k);
       return true;
     });
     return fanOutOverlaps(unique);
   }, [agentsRaw]);
 
-  // After data loads, if URL had ?agent=, open that agent
+  // After data loads, if URL had ?agent=, open that agent.
+  // Tries exact rowKey match first; falls back to matching just the id
+  // (for older share URLs that only encoded the id).
   useEffect(() => {
     if (initialUrl.agentId && agents.length > 0 && !selected) {
-      const found = agents.find((a) => a.id === initialUrl.agentId);
+      const found =
+        agents.find((a) => agentRowKey(a) === initialUrl.agentId) ??
+        agents.find((a) => a.id === initialUrl.agentId);
       if (found) {
         setSelected(found);
         setFlyTarget({ kind: "point", lat: found.lat, lng: found.lng, zoom: 12 });
@@ -75,9 +84,9 @@ export default function App() {
     }
   }, [agents, initialUrl.agentId, selected]);
 
-  // Sync state → URL
+  // Sync state → URL (use rowKey so each location is shareable)
   useSyncUrl({
-    agentId: selected?.id ?? null,
+    agentId: selected ? agentRowKey(selected) : null,
     query,
     country,
     view,

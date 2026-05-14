@@ -12,6 +12,7 @@ import L from "leaflet";
 import type { LatLngBounds, LatLngBoundsExpression, Map as LMap } from "leaflet";
 import type { Agent } from "../types";
 import { regionStats, densityRadius } from "../utils/coverage";
+import { agentRowKey } from "../utils/identity";
 
 export type FlyTarget =
   | { kind: "point"; lat: number; lng: number; zoom?: number }
@@ -42,15 +43,17 @@ const LABEL_FADE_END = 12;
 function pickVisibleLabels(
   map: LMap,
   agents: Agent[],
-  selectedId: string | null
+  selectedKey: string | null
 ): Set<string> {
   const visible = new Set<string>();
   const placed: { x: number; y: number; w: number; h: number }[] = [];
   const PAD = 6;
 
   const sorted = [...agents].sort((a, b) => {
-    if (a.id === selectedId) return -1;
-    if (b.id === selectedId) return 1;
+    const ak = agentRowKey(a);
+    const bk = agentRowKey(b);
+    if (ak === selectedKey) return -1;
+    if (bk === selectedKey) return 1;
     // Influencer agents next
     if (a.influencer && !b.influencer) return -1;
     if (!a.influencer && b.influencer) return 1;
@@ -80,7 +83,7 @@ function pickVisibleLabels(
       }
     }
     if (!conflict) {
-      visible.add(a.id);
+      visible.add(agentRowKey(a));
       placed.push(box);
     }
   }
@@ -96,11 +99,11 @@ type MapState = {
 
 function MapStateTracker({
   agents,
-  selectedId,
+  selectedKey,
   onChange,
 }: {
   agents: Agent[];
-  selectedId: string | null;
+  selectedKey: string | null;
   onChange: (s: MapState) => void;
 }) {
   const map = useMap();
@@ -115,7 +118,7 @@ function MapStateTracker({
       let visibleLabels: Set<string> = new Set();
       if (labelOpacity > 0) {
         const inView = agents.filter((a) => bounds.contains([a.lat, a.lng]));
-        visibleLabels = pickVisibleLabels(map, inView, selectedId);
+        visibleLabels = pickVisibleLabels(map, inView, selectedKey);
       }
       onChange({ zoom, bounds, labelOpacity, visibleLabels });
     };
@@ -126,7 +129,7 @@ function MapStateTracker({
       map.off("zoomend", update);
       map.off("moveend", update);
     };
-  }, [map, agents, selectedId, onChange]);
+  }, [map, agents, selectedKey, onChange]);
   return null;
 }
 
@@ -201,7 +204,7 @@ export function MapView({
         <FlyTo target={flyTarget} />
         <MapStateTracker
           agents={agents}
-          selectedId={selected?.id ?? null}
+          selectedKey={selected ? agentRowKey(selected) : null}
           onChange={setMapState}
         />
 
@@ -241,14 +244,16 @@ export function MapView({
         )}
 
         {agents.map((a) => {
-          const isSelected = selected?.id === a.id;
+          const rowKey = agentRowKey(a);
+          const selectedKey = selected ? agentRowKey(selected) : null;
+          const isSelected = selectedKey === rowKey;
           const isFaded = selected !== null && !isSelected;
-          const showLabel = mapState.visibleLabels.has(a.id);
+          const showLabel = mapState.visibleLabels.has(rowKey);
           // Bigger pins at higher zoom for easier clicking
           const base = mapState.zoom >= 12 ? 9 : mapState.zoom >= 10 ? 7 : 6;
           return (
             <CircleMarker
-              key={a.id}
+              key={rowKey}
               center={[a.lat, a.lng]}
               radius={isSelected ? base + 2 : base}
               fillColor="#d94f3b"

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { Agent } from "../types";
 import { distanceKm, formatDistance } from "../utils/distance";
+import { agentRowKey } from "../utils/identity";
 
 type Props = {
   agents: Agent[];
@@ -36,7 +37,7 @@ export function ListView({ agents, onSelect, userLocation, query }: Props) {
       {sorted.map((a) => {
         const dist = userLocation ? distanceKm(userLocation, a) : null;
         return (
-          <button key={a.id} className="card" onClick={() => onSelect(a)}>
+          <button key={agentRowKey(a)} className="card" onClick={() => onSelect(a)}>
             <div className="card-head">
               <h3>{a.name}</h3>
               {dist !== null && (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Agent } from "../types";
 import { matchesQuery } from "../utils/search";
+import { agentRowKey } from "../utils/identity";
 
 type Props = {
   query: string;
@@ -67,7 +68,7 @@ export function SearchBar({ query, onQueryChange, agents, onPick }: Props) {
         <ul className="suggestions">
           {suggestions.map((a, i) => (
             <li
-              key={a.id}
+              key={agentRowKey(a)}
               className={i === highlight ? "active" : ""}
               onMouseEnter={() => setHighlight(i)}
               onMouseDown={(e) => {

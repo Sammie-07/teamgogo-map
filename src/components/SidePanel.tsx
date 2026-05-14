@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Agent } from "../types";
 import { distanceKm, formatDistance } from "../utils/distance";
 import { shareUrlForAgent } from "../utils/url";
+import { agentRowKey } from "../utils/identity";
 
 type Props = {
   agent: Agent;
@@ -21,12 +22,12 @@ export function SidePanel({ agent, onClose, userLocation }: Props) {
 
   async function copyShareUrl() {
     try {
-      await navigator.clipboard.writeText(shareUrlForAgent(agent.id));
+      await navigator.clipboard.writeText(shareUrlForAgent(agentRowKey(agent)));
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 1500);
     } catch {
       // Fallback for older browsers — open in new tab
-      window.prompt("Copy this link:", shareUrlForAgent(agent.id));
+      window.prompt("Copy this link:", shareUrlForAgent(agentRowKey(agent)));
     }
   }
 
