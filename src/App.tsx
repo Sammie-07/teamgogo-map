@@ -134,7 +134,10 @@ export default function App() {
       const aSet = new Set(aWords);
       const peers = agents.filter((x) => {
         if (x === a) return true;
-        if (a.id && x.id && a.id === x.id) return true;
+        // Both have non-empty ids → must match exactly (avoid merging
+        // two unrelated "John Smith"s who both happen to be teamgogo agents)
+        if (a.id && x.id) return a.id === x.id;
+        // Otherwise fall back to name word-set subset/superset
         const xWords = x.name
           .toLowerCase()
           .split(/\s+/)
