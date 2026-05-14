@@ -114,17 +114,47 @@ export default function App() {
   }, [agents]);
 
   // Flies the map to the agent. Used by search/list where the user is
-  // navigating to a new agent. If the picked agent is from a country that's
-  // not the current filter, clear the filter so the agent shows on the map.
+  // navigating to a new agent. If the picked agent has multiple location
+  // rows (primary + secondary), fits bounds to ALL their pins so the user
+  // sees every location at once instead of just one.
   const pickAgent = useCallback(
     (a: Agent) => {
       setSelected(a);
-      setFlyTarget({ kind: "point", lat: a.lat, lng: a.lng, zoom: 12 });
       if (country && a.country !== country) {
         setCountry("");
       }
+      // Find peer rows for this agent — multi-location case.
+      // Same agent if: identical non-empty id, OR one name's word-set is a
+      // subset/superset of the other's (handles "Kaitlyn Posey" + "Kaitlyn N
+      // Posey", "John Smith Jr." + "John Smith", etc.)
+      const aWords = a.name
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 2);
+      const aSet = new Set(aWords);
+      const peers = agents.filter((x) => {
+        if (x === a) return true;
+        if (a.id && x.id && a.id === x.id) return true;
+        const xWords = x.name
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((w) => w.length >= 2);
+        if (xWords.length === 0 || aWords.length === 0) return false;
+        const xSet = new Set(xWords);
+        const aSubsetOfX = aWords.every((w) => xSet.has(w));
+        const xSubsetOfA = xWords.every((w) => aSet.has(w));
+        return aSubsetOfX || xSubsetOfA;
+      });
+      if (peers.length > 1) {
+        const b = boundsOfAgents(peers, 0.3);
+        if (b) {
+          setFlyTarget({ kind: "bounds", bounds: b });
+          return;
+        }
+      }
+      setFlyTarget({ kind: "point", lat: a.lat, lng: a.lng, zoom: 12 });
     },
-    [country]
+    [agents, country]
   );
 
   // Selects an agent without changing the map view. Used by direct pin/label
