@@ -149,7 +149,7 @@ export default function App() {
         return aSubsetOfX || xSubsetOfA;
       });
       if (peers.length > 1) {
-        const b = boundsOfAgents(peers, 0.3);
+        const b = boundsOfAgents(peers, 0);
         if (b) {
           setFlyTarget({ kind: "bounds", bounds: b });
           return;
@@ -169,6 +169,8 @@ export default function App() {
 
   // Enter on the search box: fit the map to ALL results without selecting
   // anyone. Lets the user see everything matching their query at once.
+  // No degree padding — flyToBounds handles padding in pixels and respects
+  // its maxZoom cap, so we don't artificially zoom out around tight clusters.
   const submitSearch = useCallback(() => {
     if (filtered.length === 0) return;
     if (filtered.length === 1) {
@@ -176,11 +178,11 @@ export default function App() {
         kind: "point",
         lat: filtered[0].lat,
         lng: filtered[0].lng,
-        zoom: 12,
+        zoom: 13,
       });
       return;
     }
-    const b = boundsOfAgents(filtered, 0.3);
+    const b = boundsOfAgents(filtered, 0);
     if (b) setFlyTarget({ kind: "bounds", bounds: b });
   }, [filtered]);
 

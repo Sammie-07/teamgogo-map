@@ -25,7 +25,7 @@ function FlyTo({ target }: { target: FlyTarget | null }) {
     if (target.kind === "point") {
       map.flyTo([target.lat, target.lng], target.zoom ?? 12, { duration: 0.8 });
     } else {
-      map.flyToBounds(target.bounds, { duration: 0.8, padding: [40, 40], maxZoom: 11 });
+      map.flyToBounds(target.bounds, { duration: 0.8, padding: [40, 40], maxZoom: 13 });
     }
   }, [target, map]);
   return null;
