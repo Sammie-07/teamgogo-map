@@ -8,9 +8,12 @@ type Props = {
   onQueryChange: (q: string) => void;
   agents: Agent[];
   onPick: (a: Agent) => void;
+  /** Called when the user hits Enter — fits the map to all results,
+   *  but does NOT pick any specific agent. */
+  onSubmit?: () => void;
 };
 
-export function SearchBar({ query, onQueryChange, agents, onPick }: Props) {
+export function SearchBar({ query, onQueryChange, agents, onPick, onSubmit }: Props) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,12 @@ export function SearchBar({ query, onQueryChange, agents, onPick }: Props) {
             setHighlight((h) => Math.max(h - 1, 0));
           } else if (e.key === "Enter") {
             e.preventDefault();
-            pick(suggestions[highlight]);
+            // Enter commits the search — closes the dropdown and asks the
+            // app to fit the map to all results, but does NOT pick an
+            // agent. The user explicitly clicks a pin / suggestion / card
+            // to view someone's details.
+            setOpen(false);
+            onSubmit?.();
           } else if (e.key === "Escape") {
             setOpen(false);
           }

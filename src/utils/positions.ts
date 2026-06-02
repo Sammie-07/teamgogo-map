@@ -27,8 +27,10 @@ export function fanOutOverlaps(agents: Agent[]): Agent[] {
     // Stable order so refresh doesn't re-shuffle
     group.sort((a, b) => a.id.localeCompare(b.id));
     const n = group.length;
-    // Approx degrees per ~150m at mid-latitudes
-    const baseRadius = 0.0015;
+    // Approx degrees per ~400m at mid-latitudes — enough visual separation
+    // at zip-level zoom (10–13) without lying about location (a zip can
+    // easily span several km).
+    const baseRadius = 0.004;
     for (let i = 0; i < n; i++) {
       const ringIndex = Math.floor(i / 8); // 8 per ring
       const slot = i % 8;

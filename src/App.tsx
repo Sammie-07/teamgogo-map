@@ -167,6 +167,23 @@ export default function App() {
     setSelected(a);
   }, []);
 
+  // Enter on the search box: fit the map to ALL results without selecting
+  // anyone. Lets the user see everything matching their query at once.
+  const submitSearch = useCallback(() => {
+    if (filtered.length === 0) return;
+    if (filtered.length === 1) {
+      setFlyTarget({
+        kind: "point",
+        lat: filtered[0].lat,
+        lng: filtered[0].lng,
+        zoom: 12,
+      });
+      return;
+    }
+    const b = boundsOfAgents(filtered, 0.3);
+    if (b) setFlyTarget({ kind: "bounds", bounds: b });
+  }, [filtered]);
+
   // Auto-fit the map when the country filter changes — so picking a country
   // with one agent zooms straight to that pin, and picking a country with
   // many fits all of them in view.
@@ -248,6 +265,7 @@ export default function App() {
           onQueryChange={setQuery}
           agents={filtered}
           onPick={pickAgent}
+          onSubmit={submitSearch}
         />
 
         <select
