@@ -27,10 +27,10 @@ export function fanOutOverlaps(agents: Agent[]): Agent[] {
     // Stable order so refresh doesn't re-shuffle
     group.sort((a, b) => a.id.localeCompare(b.id));
     const n = group.length;
-    // Approx degrees per ~400m at mid-latitudes — enough visual separation
-    // at zip-level zoom (10–13) without lying about location (a zip can
-    // easily span several km).
-    const baseRadius = 0.004;
+    // Spread tightness adapts to group size: small groups (2–4) get a wider
+    // spread so they don't sit on top of city labels; bigger groups stay
+    // tighter to fit visually. Still well within zip-code accuracy.
+    const baseRadius = n <= 4 ? 0.012 : 0.006;
     for (let i = 0; i < n; i++) {
       const ringIndex = Math.floor(i / 8); // 8 per ring
       const slot = i % 8;
