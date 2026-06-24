@@ -27,15 +27,17 @@ export function fanOutOverlaps(agents: Agent[]): Agent[] {
     // Stable order so refresh doesn't re-shuffle
     group.sort((a, b) => a.id.localeCompare(b.id));
     const n = group.length;
-    // Spread tightness adapts to group size: small groups (2–4) get a wider
-    // spread so they don't sit on top of city labels; bigger groups stay
-    // tighter to fit visually. Still well within zip-code accuracy.
-    const baseRadius = n <= 4 ? 0.012 : 0.006;
+    // Spread scales with group size. Small groups get a wider, more spread-out
+    // layout so individual pins are obviously distinct from the city label.
+    // Pairs go opposite directions (N + S) for max visual separation.
+    const baseRadius = n === 2 ? 0.025 : n <= 4 ? 0.018 : 0.008;
     for (let i = 0; i < n; i++) {
       const ringIndex = Math.floor(i / 8); // 8 per ring
       const slot = i % 8;
       const radius = baseRadius * (1 + ringIndex * 1.4);
-      const angle = (slot / 8) * 2 * Math.PI + ringIndex * 0.4;
+      // Pair → N (0) then S (π). Larger groups → evenly around the ring.
+      const slotsInRing = n === 2 ? 2 : 8;
+      const angle = (slot / slotsInRing) * 2 * Math.PI + ringIndex * 0.4;
       const lat = group[i].lat + radius * Math.cos(angle);
       // adjust lng by cos(lat) so circles don't squish near poles
       const latRad = (group[i].lat * Math.PI) / 180;
