@@ -101,16 +101,23 @@ def geocode(city: str, state: str, zip_code: str, country: str):
 # Parse CSV
 with open(SRC, newline="", encoding="utf-8") as f:
     rows = list(csv.reader(f))
-header_idx = next(i for i, r in enumerate(rows) if r and r[0] == "Agent ID")
+header_idx = next(i for i, r in enumerate(rows) if r and r[0].strip() == "Agent ID")
 header = [h.replace("\n", " ").strip() for h in rows[header_idx]]
 data_rows = rows[header_idx + 1:]
 
-def col(row, name, default=""):
-    try:
-        idx = header.index(name)
-        return (row[idx] if idx < len(row) else default).strip()
-    except ValueError:
-        return default
+def col(row, *names, default=""):
+    """First non-empty value across the given column names. Tolerant of
+    column renames in the source sheet — pass old + new names and we'll
+    take whichever exists."""
+    for name in names:
+        try:
+            idx = header.index(name)
+            v = (row[idx] if idx < len(row) else "").strip()
+            if v:
+                return v
+        except ValueError:
+            continue
+    return default
 
 agents = []
 total = len(data_rows)
@@ -125,7 +132,7 @@ for i, row in enumerate(data_rows):
     country = col(row, "Agent Country") or "US"
     city = col(row, "Agent City")
     state = col(row, "Agent State")
-    zip_code = col(row, "Agent Postal (zip) Code")
+    zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
     coords = geocode(city, state, zip_code, country)
     if coords is None:
         skipped += 1
