@@ -13,7 +13,7 @@ import csv, json, os, sys, time, urllib.parse, urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "agents-source.csv")
 OUT = os.path.join(ROOT, "public", "agents.json")
-CACHE = os.path.join(ROOT, "scripts", ".geocache_v2.json")
+CACHE = os.path.join(ROOT, "scripts", ".geocache_v3.json")
 
 UA = "teamgogo-map/1.0 (https://github.com/Sammie-07/teamgogo-map)"
 
@@ -83,18 +83,33 @@ def geocode(city: str, state: str, zip_code: str, country: str):
         return None
     if query in cache:
         return cache[query]
-    # Primary: full-address Nominatim
-    result = nominatim(query)
-    time.sleep(1.05)  # Nominatim usage policy: 1 req/sec
+
+    result = None
+
+    # For US zips, zippopotam.us is more reliable than Nominatim. Nominatim
+    # can return the wrong "Shelby" (or any duplicate-named city) even with
+    # the zip in the query; zippopotam.us is indexed by zip directly so
+    # there's no ambiguity. We use it as the primary source for US zips.
+    if country.upper() == "US" and zip_code:
+        result = zippopotam(country, zip_code)
+
+    # Fall back to Nominatim with the full address (good for non-US and
+    # for zips zippopotam.us doesn't know about).
     if result is None:
-        # Try less-specific Nominatim query (drop zip)
+        result = nominatim(query)
+        time.sleep(1.05)  # Nominatim usage policy: 1 req/sec
+
+    # Less-specific Nominatim retry (drop zip)
+    if result is None:
         less = build_query(city, state, "", country)
         if less and less != query:
             result = nominatim(less)
             time.sleep(1.05)
-    if result is None:
-        # Fallback: zippopotam by zip alone
+
+    # Last resort: zippopotam for non-US zips
+    if result is None and country.upper() != "US":
         result = zippopotam(country, zip_code)
+
     cache[query] = result
     return result
 
