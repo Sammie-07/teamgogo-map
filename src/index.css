@@ -16,7 +16,10 @@
   --radius: 10px;
   --radius-sm: 6px;
   --r-tile: 8px;
-  --tile-bg: #eef0f2;
+  /* Matches CartoDB Voyager ocean — when the user zooms out past the
+     bounded area, the empty container background blends into "more ocean"
+     instead of a jarring gray rectangle. */
+  --tile-bg: #cdeafd;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
   color: var(--text);
@@ -38,7 +41,8 @@ html.dark {
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
-  --tile-bg: #1a1c20;
+  /* Matches CartoDB DarkMatter ocean for the same seamless effect in dark mode. */
+  --tile-bg: #131516;
 }
 
 * { box-sizing: border-box; }
