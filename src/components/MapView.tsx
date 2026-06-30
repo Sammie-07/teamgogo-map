@@ -157,6 +157,8 @@ type Props = {
   showDensity: boolean;
   userLocation: { lat: number; lng: number } | null;
   darkMode: boolean;
+  shouldPulse: boolean;
+  onPulsed: () => void;
 };
 
 export function MapView({
@@ -169,6 +171,8 @@ export function MapView({
   showDensity,
   userLocation,
   darkMode,
+  shouldPulse,
+  onPulsed,
 }: Props) {
   const [mapState, setMapState] = useState<MapState>({
     zoom: initialView.zoom,
@@ -176,6 +180,27 @@ export function MapView({
     labelOpacity: 0,
     visibleLabels: new Set(),
   });
+
+  // Pin-drop pulse on first load — every pin scales up briefly so visitors
+  // immediately see the sheer count and density of agents instead of just
+  // a static field of dots.
+  const [pulseScale, setPulseScale] = useState(shouldPulse ? 0.35 : 1);
+  useEffect(() => {
+    if (!shouldPulse) return;
+    const t1 = setTimeout(() => setPulseScale(0.9), 120);
+    const t2 = setTimeout(() => setPulseScale(1.3), 380);
+    const t3 = setTimeout(() => {
+      setPulseScale(1);
+      onPulsed();
+    }, 720);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+    // intentional: only fire on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const tileUrl = darkMode
     ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -255,7 +280,7 @@ export function MapView({
             <CircleMarker
               key={rowKey}
               center={[a.lat, a.lng]}
-              radius={isSelected ? base + 2 : base}
+              radius={(isSelected ? base + 2 : base) * pulseScale}
               fillColor="#d94f3b"
               fillOpacity={isFaded ? 0.35 : 0.95}
               color="#ffffff"

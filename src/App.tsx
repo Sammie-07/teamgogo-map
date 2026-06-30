@@ -69,11 +69,13 @@ export default function App() {
     return fanOutOverlaps(unique);
   }, [agentsRaw]);
 
-  // First paint: fit the map to the full footprint of agents so the visitor
-  // sees the scale of coverage (~1,300 agents spread across multiple countries)
-  // instead of a mostly-empty zoomed-in view. Skipped if the URL already
-  // pinpoints an agent (?agent=...) — that takes priority.
+  // First paint: fit to the DENSE CORE (countries with ≥10 agents — US, CA).
+  // We intentionally ignore lone-outlier countries (AU, ES, PL, PE, PR with
+  // 1–2 agents each) because fitting them in would stretch the bounds across
+  // half the globe and make the US look like a tiny strip. Outliers are still
+  // on the map — visitors just pan to find them.
   const [didInitialFit, setDidInitialFit] = useState(false);
+  const [hasPulsedMap, setHasPulsedMap] = useState(false);
   useEffect(() => {
     if (didInitialFit) return;
     if (agents.length === 0) return;
@@ -81,12 +83,43 @@ export default function App() {
       setDidInitialFit(true);
       return;
     }
-    const b = boundsOfAgents(agents, 2);
+    const counts = new Map<string, number>();
+    for (const a of agents) {
+      counts.set(a.country, (counts.get(a.country) ?? 0) + 1);
+    }
+    const core = agents.filter((a) => (counts.get(a.country) ?? 0) >= 10);
+    const b = boundsOfAgents(core.length > 0 ? core : agents, 1.5);
     if (b) {
       setFlyTarget({ kind: "bounds", bounds: b });
     }
     setDidInitialFit(true);
   }, [agents, initialUrl.agentId, didInitialFit]);
+
+  // Hero stats — totals that don't change with filtering. Shown prominently
+  // in the header so visitors immediately feel the scale.
+  const heroStats = useMemo(() => {
+    if (agents.length === 0) return null;
+    const countries = new Set(agents.map((a) => a.country).filter(Boolean));
+    const usStates = new Set(
+      agents
+        .filter((a) => a.country === "US")
+        .map((a) => a.state)
+        .filter(Boolean)
+    );
+    const cities = new Set(
+      agents
+        .filter((a) => a.city)
+        .map(
+          (a) => `${a.city.toLowerCase()}|${a.state}|${a.country}`
+        )
+    );
+    return {
+      agents: agents.length,
+      countries: countries.size,
+      states: usStates.size,
+      cities: cities.size,
+    };
+  }, [agents]);
 
   // After data loads, if URL had ?agent=, open that agent.
   // Tries exact rowKey match first; falls back to matching just the id
@@ -281,14 +314,20 @@ export default function App() {
         <h1>
           <span className="logo-dot" /> #teamgogo map
         </h1>
-        <span className="count">
-          {loading
-            ? "Loading…"
-            : query.trim()
-            ? `${filtered.length.toLocaleString()} matching · ${agents.length.toLocaleString()} total`
-            : country
-            ? `${filtered.length.toLocaleString()} in ${country} · ${agents.length.toLocaleString()} total`
-            : `${agents.length.toLocaleString()} agents`}
+        <span className="count hero">
+          {loading || !heroStats ? (
+            "Loading…"
+          ) : (
+            <>
+              <strong>{heroStats.agents.toLocaleString()}</strong> agents
+              <span className="sep">·</span>
+              <strong>{heroStats.countries}</strong> countries
+              <span className="sep">·</span>
+              <strong>{heroStats.states}</strong> US states
+              <span className="sep">·</span>
+              <strong>{heroStats.cities.toLocaleString()}</strong> cities
+            </>
+          )}
         </span>
 
         <SearchBar
@@ -369,6 +408,8 @@ export default function App() {
             showDensity={showDensity}
             userLocation={userLocation}
             darkMode={darkMode}
+            shouldPulse={!hasPulsedMap}
+            onPulsed={() => setHasPulsedMap(true)}
           />
         ) : (
           <ListView

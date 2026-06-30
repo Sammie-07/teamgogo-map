@@ -85,6 +85,16 @@ body {
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+.header .count.hero { color: var(--text); }
+.header .count.hero strong {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.header .count.hero .sep {
+  margin: 0 6px;
+  color: var(--border);
+}
 
 /* === Search === */
 .search-wrap { position: relative; flex: 1; max-width: 360px; }
