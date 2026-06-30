@@ -69,6 +69,25 @@ export default function App() {
     return fanOutOverlaps(unique);
   }, [agentsRaw]);
 
+  // First paint: fit the map to the full footprint of agents so the visitor
+  // sees the scale of coverage (~1,300 agents spread across multiple countries)
+  // instead of a mostly-empty zoomed-in view. Skipped if the URL already
+  // pinpoints an agent (?agent=...) — that takes priority.
+  const [didInitialFit, setDidInitialFit] = useState(false);
+  useEffect(() => {
+    if (didInitialFit) return;
+    if (agents.length === 0) return;
+    if (initialUrl.agentId) {
+      setDidInitialFit(true);
+      return;
+    }
+    const b = boundsOfAgents(agents, 2);
+    if (b) {
+      setFlyTarget({ kind: "bounds", bounds: b });
+    }
+    setDidInitialFit(true);
+  }, [agents, initialUrl.agentId, didInitialFit]);
+
   // After data loads, if URL had ?agent=, open that agent.
   // Tries exact rowKey match first; falls back to matching just the id
   // (for older share URLs that only encoded the id).
@@ -97,11 +116,20 @@ export default function App() {
     return Array.from(set).sort();
   }, [agents]);
 
+  // What the MAP shows — never filtered by the search box. The map is a
+  // coverage canvas: even if no agents match your search, you should still
+  // see the closest pins around your area and pick one. Only the country
+  // dropdown filters the map (it's an explicit "browse this country" mode).
+  const mapAgents = useMemo(() => {
+    if (!country) return agents;
+    return agents.filter((a) => a.country === country);
+  }, [agents, country]);
+
+  // What the LIST view and autocomplete show — filtered by search so a long
+  // scrollable list / dropdown is actually useful. Search is global (ignores
+  // country filter) so you can find someone in any country.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    // Search is GLOBAL — when the user is searching, ignore the country
-    // filter so they can find agents in any country. When not searching,
-    // the country filter applies as a "browse this country" mode.
     const applyCountryFilter = q === "";
     return agents.filter((a) => {
       if (applyCountryFilter && country && a.country !== country) return false;
@@ -259,7 +287,11 @@ export default function App() {
         <span className="count">
           {loading
             ? "Loading…"
-            : `${filtered.length.toLocaleString()} of ${agents.length.toLocaleString()} agents`}
+            : query.trim()
+            ? `${filtered.length.toLocaleString()} matching · ${agents.length.toLocaleString()} total`
+            : country
+            ? `${mapAgents.length.toLocaleString()} of ${agents.length.toLocaleString()} agents`
+            : `${agents.length.toLocaleString()} agents`}
         </span>
 
         <SearchBar
@@ -331,7 +363,7 @@ export default function App() {
           view === "map" ? <MapSkeleton /> : <ListSkeleton />
         ) : view === "map" ? (
           <MapView
-            agents={filtered}
+            agents={mapAgents}
             selected={selected}
             flyTarget={flyTarget}
             onSelect={selectOnMap}
