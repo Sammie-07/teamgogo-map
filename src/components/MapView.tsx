@@ -214,7 +214,7 @@ export function MapView({
         center={initialView.center}
         zoom={initialView.zoom}
         scrollWheelZoom
-        minZoom={4}
+        minZoom={2}
         maxZoom={18}
         maxBounds={maxBounds ?? undefined}
         maxBoundsViscosity={0.9}
