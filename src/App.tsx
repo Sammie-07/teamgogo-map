@@ -83,15 +83,16 @@ export default function App() {
       setDidInitialFit(true);
       return;
     }
-    const counts = new Map<string, number>();
-    for (const a of agents) {
-      counts.set(a.country, (counts.get(a.country) ?? 0) + 1);
-    }
-    const core = agents.filter((a) => (counts.get(a.country) ?? 0) >= 10);
-    const b = boundsOfAgents(core.length > 0 ? core : agents, 1.5);
-    if (b) {
-      setFlyTarget({ kind: "bounds", bounds: b });
-    }
+    // Open on the lower-48 US — where ~95% of pins are. Avoids dragging
+    // the bounds north into empty Canadian wilderness or south past
+    // Mexico, both of which create huge ocean buffers on narrow viewports.
+    // Outliers (AK, HI, CA-Canada, AU, ES, PL, PE, PR) are still on the
+    // map; visitors pan to find them.
+    const LOWER_48: [[number, number], [number, number]] = [
+      [25, -125], // SW corner (San Diego / Tijuana)
+      [49, -67],  // NE corner (Maine)
+    ];
+    setFlyTarget({ kind: "bounds", bounds: LOWER_48 });
     setDidInitialFit(true);
   }, [agents, initialUrl.agentId, didInitialFit]);
 
