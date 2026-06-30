@@ -116,14 +116,11 @@ export default function App() {
     return Array.from(set).sort();
   }, [agents]);
 
-  // What the MAP shows — never filtered by the search box. The map is a
-  // coverage canvas: even if no agents match your search, you should still
-  // see the closest pins around your area and pick one. Only the country
-  // dropdown filters the map (it's an explicit "browse this country" mode).
-  const mapAgents = useMemo(() => {
-    if (!country) return agents;
-    return agents.filter((a) => a.country === country);
-  }, [agents, country]);
+  // What the MAP shows — NEVER filtered. The map is always a full coverage
+  // canvas. Search and country selection both just fly the camera; they
+  // never hide pins. Visitors should always see the nearest agents around
+  // wherever they're looking and be free to pick one.
+  const mapAgents = agents;
 
   // What the LIST view and autocomplete show — filtered by search so a long
   // scrollable list / dropdown is actually useful. Search is global (ignores
@@ -290,7 +287,7 @@ export default function App() {
             : query.trim()
             ? `${filtered.length.toLocaleString()} matching · ${agents.length.toLocaleString()} total`
             : country
-            ? `${mapAgents.length.toLocaleString()} of ${agents.length.toLocaleString()} agents`
+            ? `${filtered.length.toLocaleString()} in ${country} · ${agents.length.toLocaleString()} total`
             : `${agents.length.toLocaleString()} agents`}
         </span>
 
