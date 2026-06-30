@@ -24,7 +24,8 @@ export function boundsOfAgents(
 
 /**
  * Outer bounding box for all agents, used to clamp the map's max-pan area.
- * Wider padding so edge agents aren't pinned to the map edge.
+ * Tight padding (3°) so the user can't pan far past the last agents into
+ * empty ocean / unrelated continents.
  */
 export function agentsBounds(agents: Agent[]): [[number, number], [number, number]] | null {
   if (agents.length === 0) return null;
@@ -36,7 +37,7 @@ export function agentsBounds(agents: Agent[]): [[number, number], [number, numbe
     if (a.lng > maxLng) maxLng = a.lng;
   }
   return [
-    [Math.max(-85, minLat - 8), Math.max(-180, minLng - 12)],
-    [Math.min(85, maxLat + 8), Math.min(180, maxLng + 12)],
+    [Math.max(-85, minLat - 3), Math.max(-180, minLng - 3)],
+    [Math.min(85, maxLat + 3), Math.min(180, maxLng + 3)],
   ];
 }
