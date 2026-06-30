@@ -214,17 +214,16 @@ export function MapView({
         center={initialView.center}
         zoom={initialView.zoom}
         scrollWheelZoom
-        minZoom={3}
+        minZoom={4}
         maxZoom={18}
         maxBounds={maxBounds ?? undefined}
         maxBoundsViscosity={0.9}
         preferCanvas
-        worldCopyJump={false}
+        worldCopyJump
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url={tileUrl}
-          noWrap
         />
         <FlyTo target={flyTarget} />
         <MapStateTracker
