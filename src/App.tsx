@@ -191,11 +191,16 @@ export default function App() {
         .split(/\s+/)
         .filter((w) => w.length >= 2);
       const aSet = new Set(aWords);
+      // Real eXp Agent IDs are purely numeric. Anything else (e.g. someone
+      // accidentally typed "Cosponsor" into the Agent ID column) is a data
+      // error, not a real identifier — we ignore it for peer matching so
+      // 6 unrelated agents don't get grouped as one multi-location person.
+      const isRealId = (v: string) => !!v && /^\d+$/.test(v);
       const peers = agents.filter((x) => {
         if (x === a) return true;
-        // Both have non-empty ids → must match exactly (avoid merging
-        // two unrelated "John Smith"s who both happen to be teamgogo agents)
-        if (a.id && x.id) return a.id === x.id;
+        // Both have valid numeric ids → must match exactly (avoids merging
+        // two unrelated "John Smith"s who both have real teamgogo IDs).
+        if (isRealId(a.id) && isRealId(x.id)) return a.id === x.id;
         // Otherwise fall back to name word-set subset/superset
         const xWords = x.name
           .toLowerCase()
