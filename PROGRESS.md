@@ -1,6 +1,6 @@
 # Progress File — #teamgogo map
 
-_Last updated: 2026-07-07. Kept current with every commit; auto-mirrored to Drive._
+_Last updated: 2026-08-06. Kept current with every commit; auto-mirrored to Drive._
 
 > **Team mirror (Google Drive):** This file is auto-copied to Google Drive as **"Progress File - #teamgogo map.md"** in the folder `1Ohu5GNOY6TndHHg0LOauF5JVEcrkKMkV` ("Progress Files For All AI Projects"). Any commit that includes a change to this file re-uploads it.
 
@@ -108,6 +108,8 @@ Every hourly refresh runs these before writing new data:
 1. **Row-count drop check** — if the sheet suddenly has ≥100 fewer named rows than the previous run, abort. Prevents accidental mass deletion.
 2. **Cross-run coord drift** — if any agent's lat/lng moves more than 100 km between runs without their address changing, log a warning (potential geocoder regression).
 3. **Country-bounding-box validation** — if a US agent's coordinates land outside the US bounding box, log a warning (geocoder error).
+
+4. **Per-step timeouts** — the whole refresh job is capped at 10 min; sheet download at 2 min (with 2 retries); geocode step at 6 min. Transient runner/API hangs fail fast (was ~15 min before 2026-08-06).
 
 Failed refreshes email the repo owner and don't overwrite the good data.
 

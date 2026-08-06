@@ -17,7 +17,9 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Whole-job cap: normally finishes in <2 min. If it hangs (transient runner
+    # / API issue) we fail fast at 10 min instead of eating 15+.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -26,11 +28,15 @@ jobs:
           python-version: "3.12"
 
       - name: Download latest sheet
+        timeout-minutes: 2
         run: |
-          curl -fsSL "https://docs.google.com/spreadsheets/d/1AuNeVPAhWvdFvHiSIIz1UW6sgTMYSmIy05wTo42uVdY/export?format=csv&gid=644049566" -o agents-source.csv
+          curl -fsSL --max-time 60 --retry 2 --retry-delay 5 \
+            "https://docs.google.com/spreadsheets/d/1AuNeVPAhWvdFvHiSIIz1UW6sgTMYSmIy05wTo42uVdY/export?format=csv&gid=644049566" \
+            -o agents-source.csv
           echo "Source rows: $(wc -l < agents-source.csv)"
 
       - name: Re-geocode (cache makes repeat runs fast)
+        timeout-minutes: 6
         run: python3 scripts/geocode_v2.py
 
       - name: Commit and push if data changed
