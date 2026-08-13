@@ -81,7 +81,7 @@ Google Sheet (Gogo's team edits here)
 - Multi-location agents (2 rows in the sheet for primary + secondary location) show as 2 pins; picking one fits map bounds to both
 
 ### Header & discovery
-- Hero stats line: **"1,292 agents · 5 countries · 46 US states · 749 cities"** in brand red
+- Hero stats line: **"1,345 agents · 5 countries · 46 US states · ~750 cities"** (numbers auto-update from live data) in brand red
 - Pin-drop pulse animation on first load (~700ms) — dots pop into view drawing attention to scale
 - Agent name labels fade in at high zoom (~zoom 11+) with an anti-overlap algorithm (labels never cover each other)
 
@@ -117,6 +117,15 @@ Failed refreshes email the repo owner and don't overwrite the good data.
 
 ## Recent Fixes / Conventions to Remember
 
+### 🕒 Session summary — 2026-08-13 (auto-update reliability + row recovery)
+The hourly refresh had been failing ~20% of the time after the sheet grew to ~1,700 rows and cold-cache geocode runs overran the 6-min step timeout. Fixed in three pieces:
+
+1. **Parallel zippopotam.us prefetch** — 20-worker ThreadPoolExecutor pre-warms the cache for every uncached US zip before the sequential main loop. Geocode step now completes in ~100s even with hundreds of new agents (was 300–370s+).
+2. **US zip normalization** — pad leading zeros back on (Google Sheets strips them from northeast zips: `2026` → `02026`) and strip ZIP+4 suffixes. Recovered **68 previously-skipped MA/NJ/CT/ME/RI/NH/VT agents** (live count jumped 1,277 → 1,345).
+3. **Cron cadence** — bumped from hourly (`23 * * * *`) to every 30 min at :17 and :47 (`17,47 * * * *`). Avoids GitHub's high-contention :00 slot.
+
+Also this session: fixed Galina Iancu invisibility (peer-matcher now ignores non-numeric "Cosponsor" text IDs), added Sean Baker verification workflow, added tighter timeouts (15 min job / 9 min geocode / 2 min sheet-download) so any future hangs fail fast.
+
 - **US zip normalization** (2026-08-13): the geocoder now auto-pads US zips with leading zeros (Google Sheets strips them from northeast zips like `2026` → `02026`) and strips ZIP+4 suffixes. Recovered ~70 previously-skipped MA/NJ/CT/ME/RI/NH/VT agents.
 - **Parallel zip-code prefetch** (2026-08-13): the geocoder now fires up to 20 concurrent zippopotam.us requests before the sequential main loop. Cold-cache runs on ~400 new US agents dropped from ~6 min to well under 2 min. Fixed the hourly-refresh failures that started when the sheet grew from 1,300 → 1,700 rows.
 - **Refresh timeouts tuned**: 15 min job cap / 9 min geocode step / 2 min sheet download (with 2 retries). Was 10/6/2 before the sheet growth.
@@ -140,6 +149,11 @@ Failed refreshes email the repo owner and don't overwrite the good data.
 
 **Known data-cleanup tasks** the team should handle in the sheet:
 - 6 agents currently have literal text `"Cosponsor"` in their Agent ID column (Galina Iancu, Ana Bialek, Meagan Clark, Liz Brown, Nikki Wolfe, Lauren Blizzard). Should be replaced with their real numeric agent IDs.
+- ~5 agents still won't map because their zip has a data-entry typo (not a leading-zero issue). Known cases:
+  - Karen Alsina — Homestead, FL `33300` (should be 33030–33039 range)
+  - Kathryn Coleman West LLC — Oviedo, FL `37565` (should be 32765 or 32766)
+  - Michael Christopher Gettys — Newton, NC `26858` (should be 28658)
+  - Karen Rowell Branon, Lyndsi Cote — VT zips flagged
 
 ---
 
