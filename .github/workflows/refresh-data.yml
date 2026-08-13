@@ -1,9 +1,9 @@
 name: Refresh agent data from sheet
 
 on:
-  # Every hour at :23 past
+  # Every 30 min (at :17 and :47 past)
   schedule:
-    - cron: "23 * * * *"
+    - cron: "17,47 * * * *"
   # Manual button in GitHub UI → Actions → Refresh agent data → Run workflow
   workflow_dispatch:
 

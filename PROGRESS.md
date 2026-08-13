@@ -39,7 +39,7 @@ A public web-based directory of every #teamgogo eXp Realty agent. Visitors can b
 
 ```
 Google Sheet (Gogo's team edits here)
-  → GitHub Action runs every hour at :23 past
+  → GitHub Action runs every 30 minutes (at :17 and :47 past)
   → Downloads sheet as CSV
   → Geocodes any new zip codes (zippopotam.us first, then Nominatim)
   → Runs safeguards (row-count drop check, cross-run coord drift, country-bounding-box validation)
