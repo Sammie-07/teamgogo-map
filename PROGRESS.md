@@ -1,8 +1,20 @@
 # Progress File — #teamgogo map
 
-_Last updated: 2026-08-13. Kept current with every commit; auto-mirrored to Drive._
+_Last updated: 2026-08-13. Added persistent local clone + "why this file matters" callout._
 
 > **Team mirror (Google Drive):** This file is auto-copied to Google Drive as **"Progress File - #teamgogo map.md"** in the folder `1Ohu5GNOY6TndHHg0LOauF5JVEcrkKMkV` ("Progress Files For All AI Projects"). Any commit that includes a change to this file re-uploads it.
+
+> ### ⚠️ Why keeping this file current matters — READ THIS
+> This file is the ONLY shared record of what the map project actually is and how it works, across three audiences: (1) **Gogo's team**, who read the Drive copy and rely on it to understand status without touching GitHub or code, (2) **Claude in future sessions**, which starts every conversation cold and uses this file to skip re-discovering everything, and (3) **anyone new** who inherits this project.
+> 
+> Because the file lives in THREE places (GitHub repo → local clone → Drive mirror), skipping the update in even one commit means the team sees stale info, Claude re-invents things that were already solved, and small drifts pile up into major confusion within a few weeks.
+> 
+> **The commitment: every meaningful change to the map (feature, bug fix, sheet-schema change, cadence/timeout tuning, safeguard, convention) must include an edit to this file in the same commit.** The post-commit hook does the rest — no manual Drive upload, no cross-checking, no "I'll do it later." If you skip it, you break the team's only status source.
+> 
+> **Locations to remember:**
+> - Repo (source of truth): `github.com/Sammie-07/teamgogo-map/PROGRESS.md`
+> - Local persistent clone: `~/Documents/Projects/teamgogo-map/PROGRESS.md`
+> - Drive team mirror (auto-updated by the git hook): `~/Library/CloudStorage/GoogleDrive-tech@gogosrealestate.com/My Drive/Progress Files For All AI Projects/Progress File - #teamgogo map.md`
 
 ---
 
