@@ -117,6 +117,7 @@ Failed refreshes email the repo owner and don't overwrite the good data.
 
 ## Recent Fixes / Conventions to Remember
 
+- **US zip normalization** (2026-08-13): the geocoder now auto-pads US zips with leading zeros (Google Sheets strips them from northeast zips like `2026` → `02026`) and strips ZIP+4 suffixes. Recovered ~70 previously-skipped MA/NJ/CT/ME/RI/NH/VT agents.
 - **Parallel zip-code prefetch** (2026-08-13): the geocoder now fires up to 20 concurrent zippopotam.us requests before the sequential main loop. Cold-cache runs on ~400 new US agents dropped from ~6 min to well under 2 min. Fixed the hourly-refresh failures that started when the sheet grew from 1,300 → 1,700 rows.
 - **Refresh timeouts tuned**: 15 min job cap / 9 min geocode step / 2 min sheet download (with 2 retries). Was 10/6/2 before the sheet growth.
 - **Sheet column renames** are tolerated: the geocoder accepts both `"Agent Postal Code"` (current) and the old `"Agent Postal (zip) Code"`. If any team member renames columns further, add the new name to `scripts/geocode_v2.py`.

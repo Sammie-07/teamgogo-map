@@ -202,6 +202,16 @@ for row in data_rows:
     if country.upper() != "US":
         continue
     zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
+    # Normalise US zips: Google Sheets treats them as numbers and strips leading
+    # zeros from northeast US zips (MA/NJ/CT/ME/RI/NH/VT all start with "0").
+    # Also strip ZIP+4 suffixes (e.g. "80528-4412") — zippopotam.us only knows
+    # the base 5-digit code.
+    _c = (country or "US").upper()
+    if _c == "US" and zip_code:
+        if "-" in zip_code:
+            zip_code = zip_code.split("-")[0].strip()
+        if zip_code.isdigit() and len(zip_code) < 5:
+            zip_code = zip_code.zfill(5)
     if not zip_code:
         continue
     city = col(row, "Agent City")
@@ -236,6 +246,16 @@ for i, row in enumerate(data_rows):
     city = col(row, "Agent City")
     state = col(row, "Agent State")
     zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
+    # Normalise US zips: Google Sheets treats them as numbers and strips leading
+    # zeros from northeast US zips (MA/NJ/CT/ME/RI/NH/VT all start with "0").
+    # Also strip ZIP+4 suffixes (e.g. "80528-4412") — zippopotam.us only knows
+    # the base 5-digit code.
+    _c = (country or "US").upper()
+    if _c == "US" and zip_code:
+        if "-" in zip_code:
+            zip_code = zip_code.split("-")[0].strip()
+        if zip_code.isdigit() and len(zip_code) < 5:
+            zip_code = zip_code.zfill(5)
     coords = geocode(city, state, zip_code, country)
     if coords is None:
         skipped += 1
