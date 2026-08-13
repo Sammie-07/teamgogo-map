@@ -1,6 +1,6 @@
 # Progress File — #teamgogo map
 
-_Last updated: 2026-08-06. Kept current with every commit; auto-mirrored to Drive._
+_Last updated: 2026-08-13. Kept current with every commit; auto-mirrored to Drive._
 
 > **Team mirror (Google Drive):** This file is auto-copied to Google Drive as **"Progress File - #teamgogo map.md"** in the folder `1Ohu5GNOY6TndHHg0LOauF5JVEcrkKMkV` ("Progress Files For All AI Projects"). Any commit that includes a change to this file re-uploads it.
 
@@ -117,6 +117,8 @@ Failed refreshes email the repo owner and don't overwrite the good data.
 
 ## Recent Fixes / Conventions to Remember
 
+- **Parallel zip-code prefetch** (2026-08-13): the geocoder now fires up to 20 concurrent zippopotam.us requests before the sequential main loop. Cold-cache runs on ~400 new US agents dropped from ~6 min to well under 2 min. Fixed the hourly-refresh failures that started when the sheet grew from 1,300 → 1,700 rows.
+- **Refresh timeouts tuned**: 15 min job cap / 9 min geocode step / 2 min sheet download (with 2 retries). Was 10/6/2 before the sheet growth.
 - **Sheet column renames** are tolerated: the geocoder accepts both `"Agent Postal Code"` (current) and the old `"Agent Postal (zip) Code"`. If any team member renames columns further, add the new name to `scripts/geocode_v2.py`.
 - **Polish/non-ASCII characters** in city or agent names that arrive as `��` are already corrupted at the **source sheet level** (not our code). Fix at the sheet.
 - **When two different agents both have empty Agent IDs at the same location**, the dedupe key falls back to using the agent's name — so no one gets silently dropped.

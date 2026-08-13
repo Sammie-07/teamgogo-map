@@ -17,9 +17,10 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    # Whole-job cap: normally finishes in <2 min. If it hangs (transient runner
-    # / API issue) we fail fast at 10 min instead of eating 15+.
-    timeout-minutes: 10
+    # Whole-job cap: normally finishes in <2 min. Bumped from 10 → 15 min
+    # after the sheet grew to ~1,700 rows and cold-cache runs need more room.
+    # The per-step timeouts still catch true hangs (curl / geocode).
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +37,7 @@ jobs:
           echo "Source rows: $(wc -l < agents-source.csv)"
 
       - name: Re-geocode (cache makes repeat runs fast)
-        timeout-minutes: 6
+        timeout-minutes: 9
         run: python3 scripts/geocode_v2.py
 
       - name: Commit and push if data changed

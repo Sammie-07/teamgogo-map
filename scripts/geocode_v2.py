@@ -9,6 +9,7 @@ Rate-limited to 1 req/sec per Nominatim's usage policy. ~30 min for 1675 rows.
 Caches by full address, so re-runs are fast.
 """
 import csv, json, os, sys, time, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "agents-source.csv")
@@ -187,6 +188,46 @@ geocoded = 0
 skipped = 0
 src_count = {"nominatim": 0, "zippopotam": 0}
 
+# ---- Phase 1: parallel pre-fetch of zippopotam for uncached US zips ----
+# Zippopotam has no rate limit, so hitting it with 20 concurrent workers is
+# safe and drops the cold-cache runtime for ~400 new US zips from ~80s
+# sequential to ~5-8s. Warms `cache` before the main loop runs.
+prefetch_start = time.time()
+prefetch_queries: list[tuple[str, str, str, str]] = []
+seen_queries: set[str] = set()
+for row in data_rows:
+    if not row or not col(row, "Agent Name"):
+        continue
+    country = col(row, "Agent Country") or "US"
+    if country.upper() != "US":
+        continue
+    zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
+    if not zip_code:
+        continue
+    city = col(row, "Agent City")
+    state = col(row, "Agent State")
+    query = build_query(city, state, zip_code, country)
+    if query in cache or query in seen_queries:
+        continue
+    seen_queries.add(query)
+    prefetch_queries.append((query, country, zip_code, city + "|" + state))
+
+if prefetch_queries:
+    print(f"Prefetching zippopotam.us for {len(prefetch_queries)} uncached US queries "
+          f"(20 workers)…", flush=True)
+    def _fetch_one(item):
+        query, country, zip_code, _ctx = item
+        return query, zippopotam(country, zip_code)
+    with ThreadPoolExecutor(max_workers=20) as ex:
+        for i, (q, res) in enumerate(ex.map(_fetch_one, prefetch_queries)):
+            cache[q] = res  # may be None if zip unknown → main loop will fall back
+    with open(CACHE, "w") as f:
+        json.dump(cache, f)
+    print(f"  prefetch done in {int(time.time() - prefetch_start)}s "
+          f"({sum(1 for q in seen_queries if cache.get(q)) } of {len(prefetch_queries)} resolved)",
+          flush=True)
+
+# ---- Phase 2: main loop (now mostly cache hits + Nominatim for non-US) ----
 start = time.time()
 for i, row in enumerate(data_rows):
     if not row or not col(row, "Agent Name"):
