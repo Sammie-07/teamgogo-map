@@ -1,6 +1,6 @@
 # Progress File — #teamgogo map
 
-_Last updated: 2026-08-13. Added persistent local clone + "why this file matters" callout._
+_Last updated: 2026-08-28. Migrated tile provider from CartoDB → Stadia Maps (CARTO killed its free tier and tiles started showing "API KEY REQUIRED" watermarks). Visual style unchanged — Alidade Smooth pair is a near-identical replacement for Voyager/DarkMatter. Domain allowlist registered in Stadia for `map.teamgogo.team`, `teamgogo-map.vercel.app`, and the GitHub Pages backup._
 
 > **Team mirror (Google Drive):** This file is auto-copied to Google Drive as **"Progress File - #teamgogo map.md"** in the folder `1Ohu5GNOY6TndHHg0LOauF5JVEcrkKMkV` ("Progress Files For All AI Projects"). Any commit that includes a change to this file re-uploads it.
 
@@ -37,7 +37,7 @@ A public web-based directory of every #teamgogo eXp Realty agent. Visitors can b
 |-------|------|------|
 | Framework | Vite + React 18 + TypeScript | Build system + UI |
 | Map library | Leaflet + react-leaflet | Map rendering, pins, controls |
-| Tile provider | CartoDB Voyager (light) / DarkMatter (dark) | Free, clean, no Mapbox dependency |
+| Tile provider | Stadia Maps — Alidade Smooth (light) / Alidade Smooth Dark (dark) | Keyless (domain-allowlisted), free non-commercial |
 | Hosting | Vercel (Hobby / free tier) | Primary hosting on custom domain |
 | Backup hosting | GitHub Pages | Same code deploys to `sammie-07.github.io/teamgogo-map/` |
 | Analytics | Vercel Analytics | Visitor + page-view tracking (2500 events/mo free) |

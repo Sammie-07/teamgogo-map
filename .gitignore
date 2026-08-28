@@ -5,3 +5,4 @@ dist
 *.log
 scripts/.geocache.json
 agents-source.csv
+.claude/
