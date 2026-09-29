@@ -18,6 +18,13 @@ CACHE = os.path.join(ROOT, "scripts", ".geocache_v3.json")
 
 UA = "teamgogo-map/1.0 (https://github.com/Sammie-07/teamgogo-map)"
 
+# Agent IDs to hide from the public map even when present in the source sheet.
+# Use for people who appear on the sheet in a non-team capacity (e.g. sponsor
+# only) or who have asked not to be listed publicly.
+EXCLUDED_IDS = {
+    "236626",  # Kendra Campbell Borja LLC — sponsor only, not on #teamgogo
+}
+
 cache = {}
 if os.path.exists(CACHE):
     with open(CACHE) as f:
@@ -241,6 +248,9 @@ if prefetch_queries:
 start = time.time()
 for i, row in enumerate(data_rows):
     if not row or not col(row, "Agent Name"):
+        continue
+    if col(row, "Agent ID") in EXCLUDED_IDS:
+        skipped += 1
         continue
     country = col(row, "Agent Country") or "US"
     city = col(row, "Agent City")

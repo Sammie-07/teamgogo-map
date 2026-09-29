@@ -129,6 +129,10 @@ Failed refreshes email the repo owner and don't overwrite the good data.
 
 ## Recent Fixes / Conventions to Remember
 
+### 🕒 Session summary — 2026-09-29 (map basemap swap + agent-exclusion list)
+- **Basemap provider swapped CartoDB → Stadia Maps** (Alidade Smooth light + Alidade Smooth Dark). CartoDB killed their free tier — trial expiry would have watermarked or blocked every tile. Stadia is free with per-domain allowlist; `map.teamgogo.team`, `teamgogo-map.vercel.app`, and `localhost` are all registered on the free plan. Visual look is near-identical.
+- **`EXCLUDED_IDS` set added to `scripts/geocode_v2.py`.** Agent IDs listed there are skipped on every refresh even when present in the source sheet — use for people who appear on the sheet in a non-team capacity (sponsors) or opt-outs. First entry: `236626` (Kendra Campbell Borja LLC — on sheet as sponsor only, not a #teamgogo agent).
+
 ### 🕒 Session summary — 2026-08-13 (auto-update reliability + row recovery)
 The hourly refresh had been failing ~20% of the time after the sheet grew to ~1,700 rows and cold-cache geocode runs overran the 6-min step timeout. Fixed in three pieces:
 
