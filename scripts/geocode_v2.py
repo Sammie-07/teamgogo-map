@@ -95,6 +95,7 @@ COUNTRY_NAME_TO_CODE = {
     "canada": "CA",
     "mexico": "MX", "méxico": "MX",
     "puerto rico": "PR",
+    "poland": "PL", "polska": "PL",
     "dominican republic": "DO", "república dominicana": "DO",
     "united kingdom": "GB", "uk": "GB", "great britain": "GB",
     "spain": "ES", "españa": "ES",
@@ -131,6 +132,29 @@ def normalize_country(raw: str) -> str:
     if len(v) == 2 and v.isalpha():
         return v.upper()
     return COUNTRY_NAME_TO_CODE.get(v.lower(), v.upper())
+
+def clean_state(country: str, raw_state: str) -> str:
+    """Drop 'Other' (used in the sheet as a placeholder for non-US/CA where
+    state doesn't apply — passing it to Nominatim confuses the geocoder)."""
+    v = (raw_state or "").strip()
+    if v.lower() == "other":
+        return ""
+    return v
+
+def clean_zip(country: str, raw_zip: str) -> str:
+    """Google Sheets treats zip codes as numbers and strips leading zeros
+    (northeast US: '2026' → '02026'; Puerto Rico: '777' → '00777'). Also
+    strip ZIP+4 suffixes for zippopotam compatibility."""
+    z = (raw_zip or "").strip()
+    if not z:
+        return z
+    c = (country or "US").upper()
+    if c in ("US", "PR") and z:
+        if "-" in z:
+            z = z.split("-")[0].strip()
+        if z.isdigit() and len(z) < 5:
+            z = z.zfill(5)
+    return z
 
 # Rough country bounding boxes (min_lat, max_lat, min_lng, max_lng). Used as a
 # sanity check — if a geocoder returns coords outside the expected country box,
@@ -257,21 +281,11 @@ for row in data_rows:
     country = normalize_country(col(row, "Agent Country"))
     if country.upper() != "US":
         continue
-    zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
-    # Normalise US zips: Google Sheets treats them as numbers and strips leading
-    # zeros from northeast US zips (MA/NJ/CT/ME/RI/NH/VT all start with "0").
-    # Also strip ZIP+4 suffixes (e.g. "80528-4412") — zippopotam.us only knows
-    # the base 5-digit code.
-    _c = (country or "US").upper()
-    if _c == "US" and zip_code:
-        if "-" in zip_code:
-            zip_code = zip_code.split("-")[0].strip()
-        if zip_code.isdigit() and len(zip_code) < 5:
-            zip_code = zip_code.zfill(5)
+    zip_code = clean_zip(country, col(row, "Agent Postal Code", "Agent Postal (zip) Code"))
     if not zip_code:
         continue
     city = col(row, "Agent City")
-    state = col(row, "Agent State")
+    state = clean_state(country, col(row, "Agent State"))
     query = build_query(city, state, zip_code, country)
     if query in cache or query in seen_queries:
         continue
@@ -303,18 +317,8 @@ for i, row in enumerate(data_rows):
         continue
     country = normalize_country(col(row, "Agent Country"))
     city = col(row, "Agent City")
-    state = col(row, "Agent State")
-    zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
-    # Normalise US zips: Google Sheets treats them as numbers and strips leading
-    # zeros from northeast US zips (MA/NJ/CT/ME/RI/NH/VT all start with "0").
-    # Also strip ZIP+4 suffixes (e.g. "80528-4412") — zippopotam.us only knows
-    # the base 5-digit code.
-    _c = (country or "US").upper()
-    if _c == "US" and zip_code:
-        if "-" in zip_code:
-            zip_code = zip_code.split("-")[0].strip()
-        if zip_code.isdigit() and len(zip_code) < 5:
-            zip_code = zip_code.zfill(5)
+    state = clean_state(country, col(row, "Agent State"))
+    zip_code = clean_zip(country, col(row, "Agent Postal Code", "Agent Postal (zip) Code"))
     coords = geocode(city, state, zip_code, country)
     if coords is None:
         skipped += 1
