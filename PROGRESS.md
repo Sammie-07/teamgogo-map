@@ -129,9 +129,24 @@ Failed refreshes email the repo owner and don't overwrite the good data.
 
 ## Recent Fixes / Conventions to Remember
 
-### 🕒 Session summary — 2026-09-29 (map basemap swap + agent-exclusion list)
+### 🕒 Session summary — 2026-09-30 (eXp killed Agent IDs → email is the new key)
+eXp removed the "Agent ID" feature system-wide and Gogo's source sheet was restructured to match. From ~08:00 UTC every hourly refresh crashed at header detection (script hunted for the "Agent ID" column, which no longer exists). The site kept serving the last-good `agents.json` from 07:30 UTC — no visible breakage — but nothing new could land until the script was rewritten.
+
+**What actually changed in the sheet:**
+- **Removed columns:** `Agent ID`, `Status`, `Years with eXp`, `Influencer Status`
+- **Added columns:** `FB Group`, `FB Messenger Chat`, `Frontline Chat`, `eXp Hub`, `Business Type`, `Join Date`, `Agent Sponsor Name`, `Co-Sponsor`, `Notes`
+- **Column 0 is now `Agent Name`** (was `Agent ID`)
+
+**Fix applied to `scripts/geocode_v2.py`:**
+1. Header row is now detected by looking for `"Agent Name"` in column 0 (was `"Agent ID"`).
+2. **Primary email is the new synthetic per-agent identifier** and is written into the `id` field of every row. It's stable, unique per agent, and identical across a person's multi-location rows — so frontend multi-location peer-matching (App.tsx) keeps working with no frontend change. If email is missing, `id` falls back to `"name:{name}|{city}|{state}"`.
+3. `status`, `years`, `influencer` fields are emitted as empty strings for JSON/Type backward compatibility — the sheet no longer carries them, so the frontend just sees blanks.
+4. **`EXCLUDED_IDS` → `EXCLUDED_EMAILS`.** Skip-list is now keyed on lowercased primary email. First entry: `kendra.borja@exprealty.com` (Kendra Campbell Borja LLC — on sheet as sponsor only, not a #teamgogo agent).
+
+**Convention going forward:** every new "hide from public map" entry goes into `EXCLUDED_EMAILS` in [scripts/geocode_v2.py](scripts/geocode_v2.py) as a lowercase email string with a `# Name — reason` comment.
+
+### 🕒 Session summary — 2026-09-29 (map basemap swap)
 - **Basemap provider swapped CartoDB → Stadia Maps** (Alidade Smooth light + Alidade Smooth Dark). CartoDB killed their free tier — trial expiry would have watermarked or blocked every tile. Stadia is free with per-domain allowlist; `map.teamgogo.team`, `teamgogo-map.vercel.app`, and `localhost` are all registered on the free plan. Visual look is near-identical.
-- **`EXCLUDED_IDS` set added to `scripts/geocode_v2.py`.** Agent IDs listed there are skipped on every refresh even when present in the source sheet — use for people who appear on the sheet in a non-team capacity (sponsors) or opt-outs. First entry: `236626` (Kendra Campbell Borja LLC — on sheet as sponsor only, not a #teamgogo agent).
 
 ### 🕒 Session summary — 2026-08-13 (auto-update reliability + row recovery)
 The hourly refresh had been failing ~20% of the time after the sheet grew to ~1,700 rows and cold-cache geocode runs overran the 6-min step timeout. Fixed in three pieces:

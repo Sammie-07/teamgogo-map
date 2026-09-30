@@ -18,11 +18,14 @@ CACHE = os.path.join(ROOT, "scripts", ".geocache_v3.json")
 
 UA = "teamgogo-map/1.0 (https://github.com/Sammie-07/teamgogo-map)"
 
-# Agent IDs to hide from the public map even when present in the source sheet.
-# Use for people who appear on the sheet in a non-team capacity (e.g. sponsor
-# only) or who have asked not to be listed publicly.
-EXCLUDED_IDS = {
-    "236626",  # Kendra Campbell Borja LLC — sponsor only, not on #teamgogo
+# Primary emails to hide from the public map even when present in the source
+# sheet. Use for people who appear on the sheet in a non-team capacity (e.g.
+# sponsor only) or who have asked not to be listed publicly.
+#
+# Keyed on primary email (lowercased) because eXp removed Agent IDs from the
+# sheet in Sep 2026, so email is the new stable per-agent identifier.
+EXCLUDED_EMAILS = {
+    "kendra.borja@exprealty.com",  # Kendra Campbell Borja LLC — sponsor only, not on #teamgogo
 }
 
 cache = {}
@@ -82,6 +85,52 @@ def zippopotam(country: str, zip_code: str):
 def build_query(city: str, state: str, zip_code: str, country: str) -> str:
     parts = [p for p in [city, state, zip_code, country] if p]
     return ", ".join(parts)
+
+# Sep 2026: the source sheet switched from ISO country codes ("US", "CA", "MX")
+# to full names ("United States", "Canada", "Mexico"). Everything downstream
+# (zippopotam fast-path, bounding-box checks, frontend country filter, geocache
+# keys) expects the two-letter code — so we normalize back at ingest.
+COUNTRY_NAME_TO_CODE = {
+    "united states": "US", "united states of america": "US", "usa": "US", "u.s.": "US", "u.s.a.": "US",
+    "canada": "CA",
+    "mexico": "MX", "méxico": "MX",
+    "puerto rico": "PR",
+    "dominican republic": "DO", "república dominicana": "DO",
+    "united kingdom": "GB", "uk": "GB", "great britain": "GB",
+    "spain": "ES", "españa": "ES",
+    "portugal": "PT",
+    "france": "FR",
+    "germany": "DE", "deutschland": "DE",
+    "italy": "IT", "italia": "IT",
+    "australia": "AU",
+    "new zealand": "NZ",
+    "india": "IN",
+    "south africa": "ZA",
+    "colombia": "CO",
+    "costa rica": "CR",
+    "panama": "PA", "panamá": "PA",
+    "brazil": "BR", "brasil": "BR",
+    "argentina": "AR",
+    "chile": "CL",
+    "peru": "PE", "perú": "PE",
+    "ecuador": "EC",
+    "honduras": "HN",
+    "guatemala": "GT",
+    "el salvador": "SV",
+    "nicaragua": "NI",
+    "venezuela": "VE",
+    "uruguay": "UY",
+    "paraguay": "PY",
+}
+
+def normalize_country(raw: str) -> str:
+    """Return a 2-letter country code. Already-coded values pass through."""
+    v = (raw or "").strip()
+    if not v:
+        return "US"
+    if len(v) == 2 and v.isalpha():
+        return v.upper()
+    return COUNTRY_NAME_TO_CODE.get(v.lower(), v.upper())
 
 # Rough country bounding boxes (min_lat, max_lat, min_lng, max_lng). Used as a
 # sanity check — if a geocoder returns coords outside the expected country box,
@@ -171,7 +220,7 @@ def geocode(city: str, state: str, zip_code: str, country: str):
 # Parse CSV
 with open(SRC, newline="", encoding="utf-8") as f:
     rows = list(csv.reader(f))
-header_idx = next(i for i, r in enumerate(rows) if r and r[0].strip() == "Agent ID")
+header_idx = next(i for i, r in enumerate(rows) if r and r[0].strip() == "Agent Name")
 header = [h.replace("\n", " ").strip() for h in rows[header_idx]]
 data_rows = rows[header_idx + 1:]
 
@@ -205,7 +254,7 @@ seen_queries: set[str] = set()
 for row in data_rows:
     if not row or not col(row, "Agent Name"):
         continue
-    country = col(row, "Agent Country") or "US"
+    country = normalize_country(col(row, "Agent Country"))
     if country.upper() != "US":
         continue
     zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
@@ -249,10 +298,10 @@ start = time.time()
 for i, row in enumerate(data_rows):
     if not row or not col(row, "Agent Name"):
         continue
-    if col(row, "Agent ID") in EXCLUDED_IDS:
+    if col(row, "Agent Primary Email").strip().lower() in EXCLUDED_EMAILS:
         skipped += 1
         continue
-    country = col(row, "Agent Country") or "US"
+    country = normalize_country(col(row, "Agent Country"))
     city = col(row, "Agent City")
     state = col(row, "Agent State")
     zip_code = col(row, "Agent Postal Code", "Agent Postal (zip) Code")
@@ -272,8 +321,14 @@ for i, row in enumerate(data_rows):
     else:
         geocoded += 1
         src_count[coords.get("src", "nominatim")] = src_count.get(coords.get("src", "nominatim"), 0) + 1
+        # eXp removed Agent IDs (Sep 2026). Use primary email as the synthetic
+        # per-agent identifier — it's stable and identical across a person's
+        # rows, so multi-location peer-matching still works in the frontend.
+        # Falls back to a name-based slug if email is missing.
+        primary_email = col(row, "Agent Primary Email").strip().lower()
+        synthetic_id = primary_email or f"name:{col(row, 'Agent Name').lower()}|{city.lower()}|{state.lower()}"
         agents.append({
-            "id": col(row, "Agent ID"),
+            "id": synthetic_id,
             "name": col(row, "Agent Name"),
             "email": col(row, "Agent Primary Email"),
             "email2": col(row, "Agent Secondary Email"),
@@ -282,10 +337,10 @@ for i, row in enumerate(data_rows):
             "state": state,
             "zip": zip_code,
             "country": country,
-            "status": col(row, "Status"),
+            "status": "",
             "level": col(row, "Level"),
-            "years": col(row, "Years with eXp"),
-            "influencer": col(row, "Influencer Status"),
+            "years": "",
+            "influencer": "",
             "lat": coords["lat"],
             "lng": coords["lng"],
         })
